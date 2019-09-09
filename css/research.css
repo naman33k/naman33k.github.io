@@ -1,0 +1,81 @@
+/*######################################################
+Portfolio Content
+##################################################### */
+#container .portfolioContent
+{
+	margin: 20px 0 0 0;
+	text-align: left;
+}
+/*######################################################
+---/ End Portfolio Content
+##################################################### */
+
+
+
+
+
+/* #######################################################
+Grey Separator
+####################################################### */
+#container .greySeparator
+{
+	clear: both;
+	margin: 46px 0 0 0;
+	height: 1px;
+	background-color: #807873;
+}
+/* #######################################################
+---/ End Grey Separator
+####################################################### */
+
+
+/* #container .portfolioContent .message */
+/* { */
+/* 	font: normal 0.2em "Verdana"; */
+/* 	color: #373431; */
+/* } */
+
+
+
+/*######################################################
+Description
+##################################################### */
+#container .description
+{
+	float: left;
+	margin: 20px 0 0 0;
+	text-align: left;
+	width: 100%;
+}
+
+#container .description h1
+{
+	font: normal 0.65em "Verdana";
+	color: #da470e;
+}
+
+#container .description h2
+{
+	padding: 0 0 10px 0;
+	font: normal 0.5em "Verdana";
+	color: #807873;
+	font-style: italic;
+	border-bottom: 1px solid #807873;
+}
+
+#container .description p,
+#container .description ul
+{
+	margin: 20px 0 20px 0;
+	font: normal 0.5em "Verdana";
+	color: #373431;
+	line-height: 1.5em;
+}
+/*######################################################
+---/ End Description
+##################################################### */
+
+
+
+
+
