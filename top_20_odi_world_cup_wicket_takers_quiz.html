@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ODI World Cup Top Wicket-Takers Quiz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --cricket-gold: #f59e0b;
+            --cricket-emerald: #10b981;
+            --cricket-sky: #0284c7;
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #10b981;
+        }
+
+        .reveal-cell {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            perspective: 1000px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .hidden-mask {
+            background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.25);
+            font-size: 0.85rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hidden-mask::after {
+            content: '🔒';
+            font-size: 0.75rem;
+            opacity: 0.4;
+        }
+
+        .hidden-mask:hover {
+            background: #475569;
+            color: #10b981;
+            transform: translateY(-1px);
+        }
+
+        .revealed {
+            background: rgba(255, 255, 255, 0.03) !important;
+            color: white !important;
+            transform: rotateX(0deg);
+        }
+
+        .row-revealed {
+            background: rgba(16, 185, 129, 0.08) !important;
+            border-left: 4px solid #10b981 !important;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .input-focus:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
+            border-color: #10b981;
+        }
+
+        .player-row:hover .rank-col {
+            color: #10b981;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <header class="text-center mb-10">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold uppercase tracking-widest mb-3">
+                ⚡ ICC ODI World Cup History
+            </div>
+            <h1 class="text-4xl md:text-6xl font-black mb-3 bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-sky-400 to-amber-400">
+                World Cup Top Wicket-Takers
+            </h1>
+            <p class="text-slate-400 text-base md:text-lg max-w-xl mx-auto">
+                Test your knowledge of the highest wicket takers in Men's Cricket World Cup history!
+            </p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+                <div class="glass-panel p-5 rounded-2xl flex flex-col justify-center items-center">
+                    <span class="text-slate-400 text-xs uppercase tracking-widest font-semibold mb-1">Bowlers Found</span>
+                    <span id="playersFound" class="text-3xl font-extrabold text-emerald-400">0/20</span>
+                </div>
+                <div class="glass-panel p-5 rounded-2xl flex flex-col justify-center items-center">
+                    <span class="text-slate-400 text-xs uppercase tracking-widest font-semibold mb-1">Stats Unlocked</span>
+                    <span id="cellsUnlocked" class="text-3xl font-extrabold text-amber-400">0/100</span>
+                </div>
+                <div class="glass-panel p-5 rounded-2xl flex flex-col justify-center">
+                    <div class="flex justify-between text-xs text-slate-400 font-semibold mb-2">
+                        <span>Overall Progress</span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden p-0.5 border border-slate-700">
+                        <div id="progressBar" class="bg-gradient-to-r from-emerald-400 to-sky-400 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="glass-panel p-5 md:p-6 rounded-2xl mb-8 flex flex-col md:flex-row gap-4 items-center justify-between shadow-xl">
+            <div class="relative w-full md:w-96">
+                <input type="text" id="guessInput" placeholder="Type a player's name (e.g., McGrath, Shami, Akram)..." 
+                       class="w-full bg-slate-900/90 border border-slate-700 p-4 rounded-xl text-white input-focus transition-all pl-12 font-medium">
+                <svg class="absolute left-4 top-4.5 w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+            </div>
+            
+            <div class="flex flex-wrap gap-3 w-full md:w-auto">
+                <button id="sheetBtn" onclick="openSheetModal()" class="flex-1 md:flex-none bg-emerald-900/40 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-500/30 px-5 py-3.5 rounded-xl font-semibold transition-all active:scale-95 text-sm flex items-center justify-center gap-2">
+                    📊 View Data Sheet
+                </button>
+                <button id="hintBtn" class="flex-1 md:flex-none bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 px-5 py-3.5 rounded-xl font-semibold transition-all active:scale-95 text-sm flex items-center justify-center gap-2">
+                    💡 Give Hint
+                </button>
+                <button id="revealAllBtn" class="flex-1 md:flex-none bg-slate-700 hover:bg-slate-600 px-5 py-3.5 rounded-xl font-semibold transition-all active:scale-95 text-sm">
+                    Reveal All
+                </button>
+                <button id="resetBtn" class="flex-1 md:flex-none bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-900/40 px-5 py-3.5 rounded-xl font-semibold transition-all active:scale-95 text-sm">
+                    Reset
+                </button>
+            </div>
+        </div>
+
+        <div class="glass-panel p-5 md:p-6 rounded-2xl mb-8 border border-emerald-500/20 shadow-xl">
+            <div class="flex items-center justify-between cursor-pointer select-none mb-3" onclick="toggleRules()">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">📜</span>
+                    <h3 class="text-xl font-bold text-white">Game Rules & Scoring System</h3>
+                </div>
+                <span id="rulesToggleIcon" class="text-slate-400 text-xs font-semibold hover:text-emerald-400 transition-colors">▼ Hide Rules</span>
+            </div>
+            
+            <div id="rulesContent" class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-300 pt-3 border-t border-slate-700/60">
+                <div class="space-y-2.5">
+                    <h4 class="text-emerald-400 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
+                        <span>🎯</span> Rules of Play
+                    </h4>
+                    <ul class="space-y-2 text-slate-300 text-xs md:text-sm pl-1">
+                        <li class="flex items-start gap-2">
+                            <span class="text-emerald-400 font-bold">1.</span>
+                            <span>Players take turns making a player guess one by one.</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-red-400 font-bold">2.</span>
+                            <span><strong>Wrong Guess:</strong> A guess not on the board results in <span class="text-red-400 font-bold font-mono">-5 points</span>.</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-slate-400 font-bold">3.</span>
+                            <span><strong>Pass:</strong> You can pass your turn for <span class="text-slate-400 font-bold font-mono">no negatives (0 points)</span>.</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-sky-400 font-bold">4.</span>
+                            <span><strong>Hints:</strong> You can take a hint by revealing a category. You get a guess after the hint before turn moves on. Point reductions for hints are cumulative.</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="space-y-2.5">
+                    <h4 class="text-amber-400 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
+                        <span>🏆</span> Points System
+                    </h4>
+                    <div class="bg-slate-900/70 p-3.5 rounded-xl border border-slate-800 space-y-2.5">
+                        <div class="flex justify-between items-center pb-2 border-b border-slate-800">
+                            <span class="font-semibold text-white text-xs md:text-sm">Correct Player Guess</span>
+                            <span class="text-emerald-400 font-extrabold font-mono text-sm">+10 pts</span>
+                        </div>
+                        <div class="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
+                            Hint Point Deductions (Cumulative):
+                        </div>
+                        <ul class="text-xs space-y-1.5 pl-1 text-slate-300 font-mono">
+                            <li class="flex justify-between items-center">
+                                <span class="font-sans text-slate-300">• WC Wickets / Best Figures:</span>
+                                <span class="text-amber-400 font-bold">-3 pts each</span>
+                            </li>
+                            <li class="flex justify-between items-center">
+                                <span class="font-sans text-slate-300">• WC Span:</span>
+                                <span class="text-amber-400 font-bold">-4 pts</span>
+                            </li>
+                            <li class="flex justify-between items-center">
+                                <span class="font-sans text-slate-300">• Team / Country:</span>
+                                <span class="text-amber-400 font-bold">-5 pts</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="scoreboardSection" class="glass-panel p-5 md:p-6 rounded-2xl mb-8 border border-sky-500/20 shadow-xl">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 pb-4 border-b border-slate-700/60">
+                <div>
+                    <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                        <span>👥</span> Live Participant Scoreboard
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Add players/teams taking turns and edit their scores live</p>
+                </div>
+                <form id="addParticipantForm" onsubmit="handleAddParticipant(event)" class="flex gap-2 w-full md:w-auto">
+                    <input type="text" id="participantInput" placeholder="Participant or Team name..." 
+                           class="bg-slate-900 border border-slate-700 px-4 py-2.5 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-400 w-full md:w-64 font-medium">
+                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-all whitespace-nowrap active:scale-95">
+                        + Add Participant
+                    </button>
+                </form>
+            </div>
+
+            <div id="participantsList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <!-- Dynamically populated participant cards -->
+            </div>
+        </div>
+
+        <div class="overflow-x-auto glass-panel rounded-2xl shadow-2xl border border-slate-800">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-800/80 text-slate-400 text-xs uppercase tracking-wider border-b border-slate-700/60">
+                        <th class="p-4 font-bold text-center w-12">#</th>
+                        <th class="p-4 font-bold">Player Name</th>
+                        <th class="p-4 font-bold">Country</th>
+                        <th class="p-4 font-bold">Wickets</th>
+                        <th class="p-4 font-bold">WC Span</th>
+                        <th class="p-4 font-bold">Best Figures</th>
+                    </tr>
+                </thead>
+                <tbody id="quizTableBody">
+                    <!-- Dynamic Data Injection -->
+                </tbody>
+            </table>
+        </div>
+
+        <footer class="mt-8 text-center text-slate-500 text-sm pb-10 flex flex-col md:flex-row items-center justify-center gap-4">
+            <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-emerald-400 inline-block"></span>
+                <span>Type bowler names to unlock entire row</span>
+            </div>
+            <span class="hidden md:inline text-slate-700">•</span>
+            <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-amber-400 inline-block"></span>
+                <span>Click individual locked cells to reveal specific stats</span>
+            </div>
+        </footer>
+    </div>
+
+    <div id="winModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
+        <div class="glass-panel p-8 md:p-10 rounded-3xl text-center max-w-md border-emerald-500/50 shadow-2xl transform transition-all scale-100">
+            <div class="text-7xl mb-4 animate-bounce">🏆</div>
+            <h2 class="text-3xl font-extrabold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-sky-400">Bowling Master!</h2>
+            <p class="text-slate-300 text-sm mb-6 leading-relaxed">
+                Outstanding! You successfully identified all 20 of the highest wicket-takers in ODI World Cup history!
+            </p>
+            <button onclick="closeModal()" class="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-bold py-4 rounded-xl transition-all shadow-lg active:scale-95">
+                View Scorecard
+            </button>
+        </div>
+    </div>
+
+    <div id="sheetModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 hidden p-4">
+        <div class="glass-panel w-full max-w-4xl max-h-[90vh] rounded-3xl flex flex-col border border-slate-700 shadow-2xl overflow-hidden">
+            <div class="p-6 border-b border-slate-700/80 flex justify-between items-center bg-slate-800/50">
+                <div>
+                    <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+                        <span>📊</span> World Cup Bowling Reference Sheet
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">Full dataset for top 20 all-time highest ODI World Cup wicket takers</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="downloadCSV()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-all flex items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Export CSV
+                    </button>
+                    <button onclick="closeSheetModal()" class="text-slate-400 hover:text-white p-2 rounded-lg text-lg">✕</button>
+                </div>
+            </div>
+            
+            <div class="overflow-y-auto p-6 flex-grow">
+                <table class="w-full text-left text-sm border-collapse">
+                    <thead>
+                        <tr class="bg-slate-800 text-slate-400 text-xs uppercase tracking-wider border-b border-slate-700">
+                            <th class="p-3">Rank</th>
+                            <th class="p-3">Player Name</th>
+                            <th class="p-3">Country</th>
+                            <th class="p-3">Wickets</th>
+                            <th class="p-3">WC Span</th>
+                            <th class="p-3">Best Figures</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sheetTableBody" class="divide-y divide-slate-800/80 text-slate-300 font-mono text-xs">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="p-4 border-t border-slate-700/80 bg-slate-900/60 flex justify-between items-center text-xs text-slate-400">
+                <span>Source: Official ICC Men's Cricket World Cup Records</span>
+                <button onclick="closeSheetModal()" class="bg-slate-800 hover:bg-slate-700 text-white px-5 py-2 rounded-lg font-semibold transition-all">
+                    Close Sheet
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const quizData = [
+            { rank: 1, name: "Glenn McGrath", aliases: ["mcgrath", "glenn", "glenn mcgrath", "pigeon"], country: "Australia 🇦🇺", wickets: "71", span: "1996–2007", best: "7/15" },
+            { rank: 2, name: "Muttiah Muralitharan", aliases: ["muralitharan", "murali", "muttiah"], country: "Sri Lanka 🇱🇰", wickets: "68", span: "1996–2011", best: "4/19" },
+            { rank: 3, name: "Mitchell Starc", aliases: ["starc", "mitchell starc", "mitch starc"], country: "Australia 🇦🇺", wickets: "65", span: "2015–2023", best: "6/28" },
+            { rank: 4, name: "Lasith Malinga", aliases: ["malinga", "lasith malinga", "slinger", "slinga"], country: "Sri Lanka 🇱🇰", wickets: "56", span: "2007–2019", best: "6/38" },
+            { rank: 5, name: "Mohammed Shami", aliases: ["shami", "mohammed shami", "mohammad shami"], country: "India 🇮🇳", wickets: "55", span: "2015–2023", best: "7/57" },
+            { rank: 6, name: "Wasim Akram", aliases: ["akram", "wasim", "wasim akram"], country: "Pakistan 🇵🇰", wickets: "55", span: "1987–2003", best: "5/28" },
+            { rank: 7, name: "Trent Boult", aliases: ["boult", "trent boult", "trent"], country: "New Zealand 🇳🇿", wickets: "53", span: "2015–2023", best: "5/27" },
+            { rank: 8, name: "Chaminda Vaas", aliases: ["vaas", "chaminda vaas", "chaminda"], country: "Sri Lanka 🇱🇰", wickets: "49", span: "1996–2007", best: "6/25" },
+            { rank: 9, name: "Zaheer Khan", aliases: ["zaheer", "khan", "zaheer khan", "zak"], country: "India 🇮🇳", wickets: "44", span: "2003–2011", best: "4/42" },
+            { rank: 10, name: "Javagal Srinath", aliases: ["srinath", "javagal srinath", "javagal"], country: "India 🇮🇳", wickets: "44", span: "1992–2003", best: "4/30" },
+            { rank: 11, name: "Shakib Al Hasan", aliases: ["shakib", "shakib al hasan"], country: "Bangladesh 🇧🇩", wickets: "43", span: "2007–2023", best: "5/29" },
+            { rank: 12, name: "Tim Southee", aliases: ["southee", "tim southee"], country: "New Zealand 🇳🇿", wickets: "41", span: "2011–2023", best: "7/33" },
+            { rank: 13, name: "Imran Tahir", aliases: ["tahir", "imran tahir", "imran"], country: "South Africa 🇿🇦", wickets: "40", span: "2011–2019", best: "5/45" },
+            { rank: 14, name: "Jasprit Bumrah", aliases: ["bumrah", "jasprit bumrah", "jasprit"], country: "India 🇮🇳", wickets: "38", span: "2019–2023", best: "4/39" },
+            { rank: 15, name: "Allan Donald", aliases: ["donald", "allan donald", "white lightning"], country: "South Africa 🇿🇦", wickets: "38", span: "1992–2003", best: "4/17" },
+            { rank: 16, name: "Jacob Oram", aliases: ["oram", "jacob oram", "jacob"], country: "New Zealand 🇳🇿", wickets: "36", span: "2003–2011", best: "4/39" },
+            { rank: 17, name: "Daniel Vettori", aliases: ["vettori", "daniel vettori", "dan vettori"], country: "New Zealand 🇳🇿", wickets: "36", span: "2003–2015", best: "4/18" },
+            { rank: 18, name: "Brett Lee", aliases: ["lee", "brett lee", "binga"], country: "Australia 🇦🇺", wickets: "35", span: "2003–2011", best: "5/42" },
+            { rank: 19, name: "Wahab Riaz", aliases: ["riaz", "wahab riaz", "wahab"], country: "Pakistan 🇵🇰", wickets: "35", span: "2011–2019", best: "5/46" },
+            { rank: 20, name: "Brad Hogg", aliases: ["hogg", "brad hogg", "hoggy"], country: "Australia 🇦🇺", wickets: "34", span: "2003–2007", best: "4/27" }
+        ];
+
+        let revealedRows = new Set();
+        let revealedCells = new Set();
+        const totalRows = quizData.length;
+        const totalCells = totalRows * 5; // name, country, wickets, span, best
+
+        let participants = [
+            { id: 1, name: "Player 1", score: 0 },
+            { id: 2, name: "Player 2", score: 0 }
+        ];
+
+        function renderParticipants() {
+            const listContainer = document.getElementById('participantsList');
+            listContainer.innerHTML = '';
+
+            if (participants.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="col-span-full text-center py-4 text-slate-500 text-sm italic">
+                        No participants active. Type a name above to add participants to the game.
+                    </div>
+                `;
+                return;
+            }
+
+            // Determine highest score for crown indicator
+            const maxScore = Math.max(...participants.map(p => p.score));
+
+            participants.forEach(p => {
+                const isLeader = maxScore > 0 && p.score === maxScore;
+                const card = document.createElement('div');
+                card.className = `bg-slate-900/80 border ${isLeader ? 'border-emerald-500/50 shadow-emerald-500/10' : 'border-slate-800'} p-3.5 rounded-xl flex flex-col justify-between gap-3 shadow-md relative overflow-hidden transition-all`;
+
+                card.innerHTML = `
+                    ${isLeader ? '<span class="absolute top-2 right-2 text-xs" title="Current Leader">👑</span>' : ''}
+                    <div class="flex items-center justify-between pr-4">
+                        <span class="font-semibold text-white text-sm truncate max-w-[120px]" title="${p.name}">${p.name}</span>
+                        <button onclick="removeParticipant(${p.id})" class="text-slate-500 hover:text-red-400 text-xs transition-colors p-1" title="Remove Participant">✕</button>
+                    </div>
+                    
+                    <div class="flex items-center justify-between bg-slate-800/80 rounded-lg p-1 border border-slate-700/60">
+                        <button onclick="updateParticipantScore(${p.id}, -1)" 
+                                class="w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold flex items-center justify-center transition-all active:scale-95 text-base">
+                            -
+                        </button>
+                        <input type="number" value="${p.score}" 
+                               onchange="setParticipantScore(${p.id}, this.value)" 
+                               class="w-12 bg-transparent text-center font-extrabold text-emerald-400 text-lg focus:outline-none">
+                        <button onclick="updateParticipantScore(${p.id}, 1)" 
+                                class="w-8 h-8 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center justify-center transition-all active:scale-95 text-base">
+                            +
+                        </button>
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            });
+        }
+
+        function handleAddParticipant(e) {
+            e.preventDefault();
+            const input = document.getElementById('participantInput');
+            const name = input.value.trim();
+            if (!name) return;
+
+            participants.push({
+                id: Date.now(),
+                name: name,
+                score: 0
+            });
+
+            input.value = '';
+            renderParticipants();
+        }
+
+        function updateParticipantScore(id, delta) {
+            const p = participants.find(item => item.id === id);
+            if (p) {
+                p.score = Math.max(0, p.score + delta);
+                renderParticipants();
+            }
+        }
+
+        function setParticipantScore(id, val) {
+            const parsed = parseInt(val, 10);
+            const p = participants.find(item => item.id === id);
+            if (p) {
+                p.score = isNaN(parsed) ? 0 : Math.max(0, parsed);
+                renderParticipants();
+            }
+        }
+
+        function removeParticipant(id) {
+            participants = participants.filter(p => p.id !== id);
+            renderParticipants();
+        }
+
+        function initTable() {
+            const tbody = document.getElementById('quizTableBody');
+            tbody.innerHTML = '';
+            
+            quizData.forEach((player, idx) => {
+                const tr = document.createElement('tr');
+                tr.className = 'player-row border-b border-slate-800/60 transition-colors duration-300';
+                tr.setAttribute('data-index', idx);
+                
+                tr.innerHTML = `
+                    <td class="p-4 font-mono font-bold text-center text-slate-500 rank-col transition-colors">${player.rank}</td>
+                    <td class="p-3">
+                        <div class="reveal-cell hidden-mask h-11 px-4 rounded-xl flex items-center font-bold text-sm tracking-wide" 
+                             onclick="handleCellClick(${idx}, 'name')">
+                            <span class="opacity-0 transition-opacity duration-300">${player.name}</span>
+                        </div>
+                    </td>
+                    <td class="p-3">
+                        <div class="reveal-cell hidden-mask h-11 px-4 rounded-xl flex items-center text-sm font-medium" 
+                             onclick="handleCellClick(${idx}, 'country')">
+                            <span class="opacity-0 transition-opacity duration-300">${player.country}</span>
+                        </div>
+                    </td>
+                    <td class="p-3">
+                        <div class="reveal-cell hidden-mask h-11 px-4 rounded-xl flex items-center font-mono font-semibold text-emerald-400 text-sm" 
+                             onclick="handleCellClick(${idx}, 'wickets')">
+                            <span class="opacity-0 transition-opacity duration-300">${player.wickets}</span>
+                        </div>
+                    </td>
+                    <td class="p-3">
+                        <div class="reveal-cell hidden-mask h-11 px-4 rounded-xl flex items-center text-xs font-mono text-slate-300" 
+                             onclick="handleCellClick(${idx}, 'span')">
+                            <span class="opacity-0 transition-opacity duration-300">${player.span}</span>
+                        </div>
+                    </td>
+                    <td class="p-3">
+                        <div class="reveal-cell hidden-mask h-11 px-4 rounded-xl flex items-center text-xs font-mono font-bold text-sky-400" 
+                             onclick="handleCellClick(${idx}, 'best')">
+                            <span class="opacity-0 transition-opacity duration-300">${player.best}</span>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            populateSheetModal();
+        }
+
+        function populateSheetModal() {
+            const sheetBody = document.getElementById('sheetTableBody');
+            sheetBody.innerHTML = '';
+            quizData.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-800/40 transition-colors';
+                tr.innerHTML = `
+                    <td class="p-3 text-slate-400 font-bold">${p.rank}</td>
+                    <td class="p-3 font-sans font-semibold text-white">${p.name}</td>
+                    <td class="p-3 font-sans">${p.country}</td>
+                    <td class="p-3 text-emerald-400 font-bold">${p.wickets}</td>
+                    <td class="p-3 text-slate-400">${p.span}</td>
+                    <td class="p-3 text-sky-400">${p.best}</td>
+                `;
+                sheetBody.appendChild(tr);
+            });
+        }
+
+        function handleCellClick(idx, type) {
+            if (type === 'name') {
+                revealRow(idx);
+            } else {
+                revealCell(idx, type);
+            }
+            updateStats();
+        }
+
+        function revealCell(idx, type) {
+            const row = document.querySelector(`.player-row[data-index="${idx}"]`);
+            if (!row) return;
+            const cells = row.querySelectorAll('.reveal-cell');
+            const typeMap = { 'name': 0, 'country': 1, 'wickets': 2, 'span': 3, 'best': 4 };
+            const cellIndex = typeMap[type];
+            const target = cells[cellIndex];
+
+            if (target && !target.classList.contains('revealed')) {
+                target.classList.remove('hidden-mask');
+                target.classList.add('revealed');
+                target.querySelector('span').classList.remove('opacity-0');
+                revealedCells.add(`${idx}-${type}`);
+            }
+        }
+
+        function revealRow(idx) {
+            const row = document.querySelector(`.player-row[data-index="${idx}"]`);
+            if (!row) return;
+            const cells = row.querySelectorAll('.reveal-cell');
+            
+            row.classList.add('row-revealed');
+            const types = ['name', 'country', 'wickets', 'span', 'best'];
+            
+            cells.forEach((cell, i) => {
+                if (!cell.classList.contains('revealed')) {
+                    cell.classList.remove('hidden-mask');
+                    cell.classList.add('revealed');
+                    cell.querySelector('span').classList.remove('opacity-0');
+                    revealedCells.add(`${idx}-${types[i]}`);
+                }
+            });
+            revealedRows.add(idx);
+        }
+
+        const guessInput = document.getElementById('guessInput');
+        guessInput.addEventListener('input', (e) => {
+            const val = e.target.value.toLowerCase().trim();
+            if (val.length < 2) return;
+
+            quizData.forEach((player, idx) => {
+                const nameMatch = player.name.toLowerCase().includes(val);
+                const aliasMatch = player.aliases.some(a => a === val || (val.length >= 3 && a.includes(val)));
+
+                if (nameMatch || aliasMatch) {
+                    if (!revealedRows.has(idx)) {
+                        revealRow(idx);
+                        updateStats();
+                        triggerGuessSuccess();
+                    }
+                }
+            });
+        });
+
+        function triggerGuessSuccess() {
+            guessInput.classList.add('ring-2', 'ring-emerald-400');
+            setTimeout(() => {
+                guessInput.classList.remove('ring-2', 'ring-emerald-400');
+                guessInput.value = '';
+            }, 600);
+        }
+
+        function updateStats() {
+            const playersEl = document.getElementById('playersFound');
+            const cellsEl = document.getElementById('cellsUnlocked');
+            const progressEl = document.getElementById('progressBar');
+            const percentEl = document.getElementById('progressPercent');
+
+            playersEl.innerText = `${revealedRows.size}/${totalRows}`;
+            cellsEl.innerText = `${revealedCells.size}/${totalCells}`;
+            
+            const percentage = Math.round((revealedCells.size / totalCells) * 100);
+            progressEl.style.width = `${percentage}%`;
+            percentEl.innerText = `${percentage}%`;
+
+            if (revealedRows.size === totalRows && !document.getElementById('winModal').dataset.shown) {
+                document.getElementById('winModal').classList.remove('hidden');
+                document.getElementById('winModal').dataset.shown = "true";
+            }
+        }
+
+        document.getElementById('hintBtn').addEventListener('click', () => {
+            const unrevealed = [];
+            quizData.forEach((_, idx) => {
+                if (!revealedRows.has(idx)) unrevealed.push(idx);
+            });
+
+            if (unrevealed.length > 0) {
+                const randomIdx = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+                revealCell(randomIdx, 'country');
+                revealCell(randomIdx, 'span');
+                updateStats();
+            }
+        });
+
+        document.getElementById('revealAllBtn').addEventListener('click', () => {
+            quizData.forEach((_, idx) => revealRow(idx));
+            updateStats();
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            revealedRows.clear();
+            revealedCells.clear();
+            delete document.getElementById('winModal').dataset.shown;
+            initTable();
+            updateStats();
+        });
+
+        function closeModal() {
+            document.getElementById('winModal').classList.add('hidden');
+        }
+
+        function openSheetModal() {
+            document.getElementById('sheetModal').classList.remove('hidden');
+        }
+
+        function closeSheetModal() {
+            document.getElementById('sheetModal').classList.add('hidden');
+        }
+
+        function toggleRules() {
+            const content = document.getElementById('rulesContent');
+            const icon = document.getElementById('rulesToggleIcon');
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                icon.innerText = '▼ Hide Rules';
+            } else {
+                content.classList.add('hidden');
+                icon.innerText = '▲ Show Rules';
+            }
+        }
+
+        function downloadCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,Rank,Player,Country,WC Wickets,WC Career Span,Best Figures\n";
+            quizData.forEach(p => {
+                const cleanCountry = p.country.replace(/[\uE000-\uF8FF]|\uD83C[\uDF00-\uDFFF]|\uD83D[\uDC00-\uDDFF]/g, '').trim();
+                csvContent += `"${p.rank}","${p.name}","${cleanCountry}","${p.wickets}","${p.span}","${p.best}"\n`;
+            });
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "top_20_odi_world_cup_wicket_takers.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        window.onload = () => {
+            initTable();
+            updateStats();
+            renderParticipants();
+        };
+    </script>
+</body>
+</html>
