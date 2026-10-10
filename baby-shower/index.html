@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Baby Guess</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body class="bg-slate-950 text-white min-h-screen p-4 flex flex-col items-center justify-center font-sans select-none">
+
+  <!-- 1. Passcode Login -->
+  <div id="login-card" class="w-full max-w-sm bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-4">
+    <h1 class="text-2xl font-bold text-center text-amber-400">Enter Your Passcode</h1>
+    <p class="text-xs text-slate-400 text-center">Enter the 4-digit code provided at check-in</p>
+    <input id="passcode-input" type="text" maxlength="4" placeholder="1001"
+      class="w-full text-center text-3xl tracking-widest bg-slate-800 border border-slate-700 rounded-xl py-3 focus:outline-none focus:border-amber-400 font-mono">
+    <button onclick="handleLogin()" class="w-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold py-3.5 rounded-xl transition">
+      Enter Game
+    </button>
+  </div>
+
+  <!-- 2. Active Game Screen -->
+  <div id="game-card" class="w-full max-w-sm hidden flex flex-col space-y-4">
+    <div class="flex justify-between items-center bg-slate-900 p-3.5 rounded-xl border border-slate-800">
+      <div>
+        <p class="text-xs text-slate-400 uppercase tracking-wide">Player</p>
+        <p id="player-name" class="font-black text-amber-400 text-lg"></p>
+      </div>
+      <div class="text-right">
+        <p class="text-xs text-slate-400 uppercase tracking-wide">Score</p>
+        <p id="player-score" class="font-black text-xl font-mono text-emerald-400">0</p>
+      </div>
+    </div>
+
+    <!-- Active Voting Selection -->
+    <div id="voting-box" class="bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-4 text-center">
+      <h2 class="text-lg font-bold">Who is on the big screen?</h2>
+
+      <!-- Selected Choice Reference Preview Card -->
+      <div id="selected-preview" class="hidden bg-slate-800/80 border border-amber-400/50 p-3 rounded-xl flex items-center space-x-3 text-left">
+        <img id="preview-adult-img" class="w-14 h-14 rounded-lg object-cover border border-amber-400 bg-slate-700" src="" alt="Adult">
+        <div class="flex-1 min-w-0">
+          <p class="text-xs text-amber-400 font-bold uppercase tracking-wider">Your Pick</p>
+          <p id="preview-adult-name" class="font-extrabold text-base truncate text-white"></p>
+        </div>
+      </div>
+
+      <!-- Scrollable List of Choices with Adult Photo Thumbnails -->
+      <div id="choices-list" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
+
+      <button id="lock-btn" disabled onclick="submitVote()" class="w-full bg-slate-800 text-slate-500 font-bold py-3.5 rounded-xl transition">
+        Select a Name
+      </button>
+    </div>
+
+    <!-- Frozen / Waiting Screen -->
+    <div id="wait-box" class="bg-slate-900 p-7 rounded-2xl border border-slate-800 text-center space-y-3 hidden">
+      <div id="wait-icon" class="text-4xl">⏳</div>
+      <h2 id="wait-title" class="text-lg font-bold text-amber-400">Waiting for Round to Begin</h2>
+      <p id="wait-subtitle" class="text-xs text-slate-400">Keep an eye on the TV screen!</p>
+    </div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDl0VlOTJl4HayJ5WPRlXqRZtMipyBDg3c",
+      authDomain: "baby-shower-game-e5a47.firebaseapp.com",
+      databaseURL: "https://baby-shower-game-e5a47-default-rtdb.firebaseio.com",
+      projectId: "baby-shower-game-e5a47",
+      storageBucket: "baby-shower-game-e5a47.firebasestorage.app",
+      messagingSenderId: "268637242288",
+      appId: "1:268637242288:web:9bcf6b669e1ff010088c75",
+      measurementId: "G-GD0PY79KMN"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const PLAYERS = [
+      { id: "p1",  name: "Shreshth",  code: "1001", adult: "./images/shreshth_adult.jpg" },
+      { id: "p2",  name: "Nikita",    code: "1002", adult: "./images/nikita_adult.jpg" },
+      { id: "p3",  name: "Chhajlani", code: "1003", adult: "./images/chhajlani_adult.jpg" },
+      { id: "p4",  name: "Eti",       code: "1004", adult: "./images/eti_adult.jpg" },
+      { id: "p5",  name: "Anali",     code: "1005", adult: "./images/anali_adult.jpg" },
+      { id: "p6",  name: "Khush",     code: "1006", adult: "./images/khush_adult.jpg" },
+      { id: "p7",  name: "Shantanu",  code: "1007", adult: "./images/shantanu_adult.jpg" },
+      { id: "p8",  name: "Hetali",    code: "1008", adult: "./images/hetali_adult.jpg" },
+      { id: "p9",  name: "Anna",      code: "1009", adult: "./images/anna_adult.jpg" },
+      { id: "p10", name: "Shreya",    code: "1010", adult: "./images/shreya_adult.jpg" },
+      { id: "p11", name: "Vani",      code: "1011", adult: "./images/vani_adult.jpg" },
+      { id: "p12", name: "Saurabh",   code: "1012", adult: "./images/saurabh_adult.jpg" },
+      { id: "p13", name: "Aru",       code: "1013", adult: "./images/aru_adult.jpg" },
+      { id: "p14", name: "Aditya",    code: "1014", adult: "./images/aditya_adult.jpg" },
+      { id: "p15", name: "Sumat",     code: "1015", adult: "./images/sumat_adult.jpg" },
+      { id: "p16", name: "Emily",     code: "1016", adult: "./images/emily_adult.jpg" },
+      { id: "p17", name: "Shipra",    code: "1017", adult: "./images/shipra_adult.jpg" },
+      { id: "p18", name: "Divyam",    code: "1018", adult: "./images/divyam_adult.jpg" },
+      { id: "p19", name: "Vishita",   code: "1019", adult: "./images/vishita_adult.jpg" },
+      { id: "p20", name: "Ronak",     code: "1020", adult: "./images/ronak_adult.jpg" },
+      { id: "p21", name: "Anjali",    code: "1021", adult: "./images/anjali_adult.jpg" },
+      { id: "p22", name: "Aditi",     code: "1022", adult: "./images/aditi_adult.jpg" },
+      { id: "p23", name: "Naman",     code: "1023", adult: "./images/naman_adult.jpg", isHost: true },
+      { id: "p24", name: "Vibhay",    code: "1024", adult: "./images/vibhay_adult.jpg" }
+    ];
+
+    let me = null;
+    let selectedChoiceId = null;
+    let currentRoundPlayerId = null;
+
+    function init() {
+      const savedCode = localStorage.getItem('guest_passcode');
+      if (savedCode) {
+        document.getElementById('passcode-input').value = savedCode;
+        handleLogin();
+      }
+    }
+
+    function handleLogin() {
+      const code = document.getElementById('passcode-input').value.trim();
+      const user = PLAYERS.find(p => p.code === code);
+
+      if (!user) {
+        alert('Invalid passcode. Please check your code.');
+        return;
+      }
+
+      me = user;
+      localStorage.setItem('guest_passcode', code);
+      document.getElementById('login-card').classList.add('hidden');
+      document.getElementById('game-card').classList.remove('hidden');
+      document.getElementById('player-name').innerText = me.name;
+
+      db.ref(`scores/${me.id}`).on('value', snap => {
+        document.getElementById('player-score').innerText = snap.val() || 0;
+      });
+
+      db.ref('gameState').on('value', snap => {
+        const state = snap.val() || {};
+        syncGameState(state);
+      });
+    }
+
+    async function syncGameState(state) {
+      currentRoundPlayerId = state.currentRoundPlayerId;
+
+      if (state.stage === 'GAME_OVER') {
+        showWaiting("🏆", "Game Complete!", "Look at the big screen to see who won!");
+        return;
+      }
+
+      if (state.stage === 'GUESSING') {
+        if (currentRoundPlayerId === me.id) {
+          showWaiting("🤫", "This is YOUR baby photo!", "Keep a straight face while everyone guesses!");
+          return;
+        }
+
+        const snap = await db.ref(`currentGuesses/${me.id}`).once('value');
+        if (snap.exists()) {
+          showWaiting("🔒", "Pick Locked In!", "Look at the big screen for the reveals...");
+        } else {
+          showVoting();
+        }
+      } else {
+        showWaiting("🔒", "Picks Frozen", "Revealing results on the big screen!");
+      }
+    }
+
+    function showVoting() {
+      document.getElementById('voting-box').classList.remove('hidden');
+      document.getElementById('wait-box').classList.add('hidden');
+      document.getElementById('selected-preview').classList.add('hidden');
+      const container = document.getElementById('choices-list');
+
+      const eligible = PLAYERS.filter(p => p.id !== me.id);
+      container.innerHTML = eligible.map(p => `
+        <button onclick="selectChoice('${p.id}', this)" class="choice-btn w-full p-2.5 flex items-center space-x-3 rounded-xl bg-slate-800 border border-slate-700 transition">
+          <img src="${p.adult}" onerror="this.src='https://placehold.co/48x48/1e293b/f8fafc?text=?'" class="w-10 h-10 rounded-lg object-cover bg-slate-700 border border-slate-600 flex-shrink-0" alt="${p.name}">
+          <span class="font-bold text-sm text-left truncate flex-1">${p.name}</span>
+        </button>
+      `).join('');
+
+      selectedChoiceId = null;
+      const btn = document.getElementById('lock-btn');
+      btn.disabled = true;
+      btn.className = "w-full bg-slate-800 text-slate-500 font-bold py-3.5 rounded-xl transition";
+      btn.innerText = "Select a Name";
+    }
+
+    function selectChoice(id, el) {
+      selectedChoiceId = id;
+      const targetUser = PLAYERS.find(p => p.id === id);
+
+      document.querySelectorAll('.choice-btn').forEach(b => {
+        b.classList.remove('border-amber-400', 'bg-amber-950/40');
+      });
+      el.classList.add('border-amber-400', 'bg-amber-950/40');
+
+      if (targetUser) {
+        const preview = document.getElementById('selected-preview');
+        preview.classList.remove('hidden');
+        document.getElementById('preview-adult-img').src = targetUser.adult;
+        document.getElementById('preview-adult-name').innerText = targetUser.name;
+      }
+
+      const btn = document.getElementById('lock-btn');
+      btn.disabled = false;
+      btn.className = "w-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold py-3.5 rounded-xl transition";
+      btn.innerText = "Lock In Pick 🔒";
+    }
+
+    async function submitVote() {
+      if (!selectedChoiceId || !currentRoundPlayerId) return;
+      await db.ref(`currentGuesses/${me.id}`).set(selectedChoiceId);
+      showWaiting("🔒", "Pick Locked In!", "Look at the big screen for the reveals...");
+    }
+
+    function showWaiting(icon, title, subtitle) {
+      document.getElementById('voting-box').classList.add('hidden');
+      const waitBox = document.getElementById('wait-box');
+      waitBox.classList.remove('hidden');
+      document.getElementById('wait-icon').innerText = icon;
+      document.getElementById('wait-title').innerText = title;
+      document.getElementById('wait-subtitle').innerText = subtitle;
+    }
+
+    init();
+  </script>
+</body>
+</html>
