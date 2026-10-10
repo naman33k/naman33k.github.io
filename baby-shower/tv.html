@@ -41,9 +41,9 @@
       <div class="bg-slate-900/80 border border-slate-800 p-6 rounded-2xl">
         <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
           <span class="text-xs uppercase font-bold text-slate-400 tracking-wider">Include in Baby Photo Rounds</span>
-          <span id="active-queue-count" class="text-xs font-bold text-amber-400">24 / 24 Photos Active</span>
+          <span id="active-queue-count" class="text-xs font-bold text-amber-400">25 / 25 Photos Active</span>
         </div>
-        <div id="setup-roster" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 text-left"></div>
+        <div id="setup-roster" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 text-left"></div>
       </div>
     </div>
 
@@ -51,7 +51,7 @@
     <div id="view-lobby" class="w-full max-w-5xl space-y-5 hidden animate-pop">
       <div>
         <h2 class="text-4xl font-black text-amber-400 tracking-tight">Join The Game! 🍼</h2>
-        <p class="text-slate-300 text-sm font-medium mt-1">Scan the QR code with your phone and find your 4-digit code in the table below.</p>
+        <p class="text-slate-300 text-sm font-medium mt-1">Scan the QR code with your phone and find your 4-digit code in the directory below.</p>
       </div>
 
       <!-- QR & Passcode Directory Block -->
@@ -65,13 +65,13 @@
           <p class="text-xs text-slate-400 break-all font-mono">naman33k.github.io/baby-shower/index.html</p>
         </div>
 
-        <!-- 3-Column Passcodes Directory -->
+        <!-- Passcode Directory -->
         <div class="md:col-span-8 bg-slate-900/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-xl text-left">
           <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-800">
             <h3 class="text-xs font-black text-slate-300 uppercase tracking-wider">Guest Passcode Directory</h3>
             <span id="lobby-queue-info" class="text-xs text-amber-400 font-bold"></span>
           </div>
-          <div id="passcode-table-container" class="grid grid-cols-3 gap-x-4 gap-y-1.5 text-xs"></div>
+          <div id="passcode-table-container" class="grid grid-cols-3 gap-x-4 gap-y-1.5 text-xs max-h-64 overflow-y-auto pr-1"></div>
         </div>
       </div>
 
@@ -81,19 +81,19 @@
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-slate-200 text-xs">
           <div class="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
             <p class="font-extrabold text-emerald-400 text-sm mb-0.5">🎯 Guess Right: +10 pts</p>
-            <p class="text-slate-400">Earned when you identify the baby on screen.</p>
+            <p class="text-slate-400">Identify the correct person (or 'No-one' for decoys!).</p>
           </div>
           <div class="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
             <p class="font-extrabold text-amber-400 text-sm mb-0.5">🎭 Fooling: +5 pts / person</p>
-            <p class="text-slate-400">Given to the baby owner for each wrong vote.</p>
+            <p class="text-slate-400">Awarded to the photo owner for each wrong vote.</p>
           </div>
           <div class="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
-            <p class="font-extrabold text-rose-400 text-sm mb-0.5">💍 Fooled Partner: +50 pts</p>
-            <p class="text-slate-400">Bonus if your partner guesses wrong.</p>
+            <p class="font-extrabold text-rose-400 text-sm mb-0.5">💍 Partner Bonus: +20 pts</p>
+            <p class="text-slate-400">If partner is fooled (or auto-awarded if single).</p>
           </div>
           <div class="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
             <p class="font-extrabold text-purple-400 text-sm mb-0.5">👑 Fooled Aditi: +20 pts</p>
-            <p class="text-slate-400">Bonus if the mother-to-be is tricked.</p>
+            <p class="text-slate-400">Bonus if the mother-to-be votes incorrectly.</p>
           </div>
         </div>
       </div>
@@ -110,7 +110,7 @@
 
         <!-- Real Baby Photo for Emily -->
         <div id="box-real-baby" class="flex flex-col items-center hidden animate-pop">
-          <span class="text-sm font-bold text-fuchsia-400 mb-2 uppercase tracking-wider">Real Baby Photo!</span>
+          <span id="real-baby-label" class="text-sm font-bold text-fuchsia-400 mb-2 uppercase tracking-wider">Real Baby Photo!</span>
           <img id="real-baby-img" onerror="this.src='https://placehold.co/320x384/1e293b/f8fafc?text=Real+Baby+Missing'" class="w-64 h-80 object-cover rounded-2xl border-4 border-fuchsia-400 shadow-2xl bg-slate-900" src="" alt="Real Baby">
         </div>
 
@@ -147,16 +147,14 @@
       <div id="leaderboard-list" class="space-y-2 text-left"></div>
     </div>
 
-    <!-- 5. Finale & Awards View (End of Game) -->
+    <!-- 5. Finale & Awards View -->
     <div id="view-finale" class="w-full max-w-4xl hidden space-y-8 animate-pop">
       <div>
         <h2 class="text-5xl font-black text-amber-400 mb-2">🎉 Game Complete! 🎉</h2>
         <p class="text-slate-300 text-xl font-semibold">Here are the champions of the baby shower!</p>
       </div>
 
-      <!-- Superlative Cards Podium -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Best Guesser -->
         <div class="bg-slate-900/90 border-2 border-emerald-400 p-6 rounded-2xl text-center shadow-2xl relative overflow-hidden">
           <div class="text-4xl mb-2">🎯</div>
           <p class="text-xs font-black uppercase text-emerald-400 tracking-widest">Best Guesser</p>
@@ -164,7 +162,6 @@
           <p id="award-guesser-stat" class="text-sm text-slate-400 mt-1 font-mono">0 pts earned from guesses</p>
         </div>
 
-        <!-- Master of Disguise -->
         <div class="bg-slate-900/90 border-2 border-fuchsia-400 p-6 rounded-2xl text-center shadow-2xl relative overflow-hidden">
           <div class="text-4xl mb-2">🎭</div>
           <p class="text-xs font-black uppercase text-fuchsia-400 tracking-widest">Master of Disguise</p>
@@ -173,7 +170,6 @@
         </div>
       </div>
 
-      <!-- Full Ranked Table with Breakdown -->
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-left">
         <h3 class="text-xl font-black text-amber-400 uppercase tracking-wider mb-4 border-b border-slate-800 pb-2">Final Standings</h3>
         <div class="overflow-x-auto">
@@ -211,7 +207,7 @@
     const POINTS = {
       CORRECT: 10,
       FOOLED_EACH: 5,
-      FOOLED_PARTNER: 50,
+      FOOLED_PARTNER: 20,
       FOOLED_MOTHER: 20
     };
 
@@ -239,7 +235,8 @@
       { id: "p21", name: "Anjali",    code: "1021", partner: "Ronak",    isMother: false, isHost: false, baby: "./images/anjali_baby.jpg",    adult: "./images/anjali_adult.jpg" },
       { id: "p22", name: "Aditi",     code: "1022", partner: "Naman",    isMother: true,  isHost: false, baby: "./images/aditi_baby.jpg",     adult: "./images/aditi_adult.jpg" },
       { id: "p23", name: "Naman",     code: "1023", partner: "Aditi",    isMother: false, isHost: true,  baby: "./images/naman_baby.jpg",     adult: "./images/naman_adult.jpg" },
-      { id: "p24", name: "Vibhay",    code: "1024", partner: null,       isMother: false, isHost: false, baby: "./images/vibhay_baby.jpg",    adult: "./images/vibhay_adult.jpg" }
+      { id: "p24", name: "Vibhay",    code: "1024", partner: null,       isMother: false, isHost: false, baby: "./images/vibhay_baby.jpg",    adult: "./images/vibhay_adult.jpg" },
+      { id: "p25", name: "Kaustubh",  code: "1025", partner: null,       isMother: false, isHost: false, baby: "./images/kaustubh_baby.jpg",  adult: "./images/kaustubh_adult.jpg" }
     ];
 
     const roundStages = [
@@ -385,7 +382,6 @@
       document.getElementById('primary-btn').innerText = "Start Game 🎮";
       document.getElementById('lobby-queue-info').innerText = `${includedPlayerIds.size} Photos Queued`;
 
-      // Render 3-column Passcode Table
       const tableContainer = document.getElementById('passcode-table-container');
       tableContainer.innerHTML = PLAYERS.map(p => `
         <div class="flex items-center justify-between p-1.5 px-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
@@ -425,7 +421,15 @@
 
       if (appState === 'LOBBY') {
         appState = 'IN_GAME';
-        roundQueue = shuffleArray(Array.from(includedPlayerIds));
+
+        // Custom Queue Order: Randomize everyone else, Naman (p23) placed last
+        const activeIds = Array.from(includedPlayerIds);
+        const hasNaman = activeIds.includes('p23');
+        const nonNamanIds = activeIds.filter(id => id !== 'p23');
+        const shuffledOthers = shuffleArray(nonNamanIds);
+
+        roundQueue = hasNaman ? [...shuffledOthers, 'p23'] : shuffledOthers;
+
         await db.ref('roundQueue').set(roundQueue);
         currentRoundIndex = 0;
         stageStep = 0;
@@ -491,7 +495,7 @@
         banner.innerText = `It's ${currentTarget.name}!`;
         banner.classList.remove('hidden');
 
-        // Emily 3-photo reveal
+        // Emily decoy 3-photo reveal
         if (currentTarget.realBaby) {
           document.getElementById('baby-label').innerText = "Decoy Photo (Shown)";
           document.getElementById('baby-img').className = "w-64 h-80 object-cover rounded-2xl border-4 border-slate-600 opacity-75 shadow-2xl bg-slate-900 transition-all duration-300";
@@ -501,7 +505,7 @@
 
           const trickCard = document.getElementById('card-emily-trick');
           trickCard.classList.remove('hidden');
-          trickCard.innerHTML = `🎭 PLOT TWIST: You were shown a decoy picture!`;
+          trickCard.innerHTML = `🎭 PLOT TWIST: A decoy picture was shown! The correct answer was <strong>"No-one"</strong>!`;
         } else {
           document.getElementById('box-real-baby').classList.add('hidden');
           document.getElementById('baby-img').className = "w-80 h-96 object-cover rounded-2xl border-4 border-amber-400 shadow-2xl bg-slate-900 transition-all duration-300";
@@ -518,7 +522,7 @@
           </div>
           <div class="text-xs text-amber-200/80 space-x-2">
             <span>• Fooled ${roundData.wrongVoterNames.length} player(s) (+${roundData.wrongVoterNames.length * POINTS.FOOLED_EACH} pts)</span>
-            ${roundData.partnerFooled ? `<span class="text-rose-300 font-bold">• Fooled Partner (+50 pts)</span>` : ''}
+            ${roundData.partnerAwarded ? `<span class="text-rose-300 font-bold">• Partner Bonus (+20 pts${currentTarget.partner ? ': Fooled ' + currentTarget.partner : ': Single'})</span>` : ''}
             ${roundData.motherFooled ? `<span class="text-purple-300 font-bold">• Fooled Aditi (+20 pts)</span>` : ''}
           </div>
         `;
@@ -571,17 +575,24 @@
         playerStats[currentTarget.id] = { score: 0, guessPoints: 0, disguisePoints: 0, peopleFooled: 0 };
       }
 
+      // True correct choice: 'none' if decoy round (Emily), otherwise target's id
+      const targetCorrectChoice = currentTarget.realBaby ? 'none' : currentTarget.id;
+
       Object.keys(currentGuesses).forEach(voterId => {
         const guessedTargetId = currentGuesses[voterId];
         const voter = PLAYERS.find(p => p.id === voterId);
-        const guessedPerson = PLAYERS.find(p => p.id === guessedTargetId);
+        let guessedLabel = "No-one";
+        if (guessedTargetId !== 'none') {
+          const guessedPerson = PLAYERS.find(p => p.id === guessedTargetId);
+          guessedLabel = guessedPerson ? guessedPerson.name : 'Unknown';
+        }
 
         if (!voter) return;
         if (!playerStats[voterId]) {
           playerStats[voterId] = { score: 0, guessPoints: 0, disguisePoints: 0, peopleFooled: 0 };
         }
 
-        if (guessedTargetId === currentTarget.id) {
+        if (guessedTargetId === targetCorrectChoice) {
           playerStats[voterId].score += POINTS.CORRECT;
           playerStats[voterId].guessPoints += POINTS.CORRECT;
           correctVoterNames.push(voter.name);
@@ -593,20 +604,25 @@
 
           wrongVoterNames.push({
             name: voter.name,
-            guessed: guessedPerson ? guessedPerson.name : 'Unknown'
+            guessed: guessedLabel
           });
         }
       });
 
-      // Fooled Partner Bonus (+50 pts)
-      let partnerFooled = false;
-      if (currentTarget.partner) {
+      // Partner Bonus (+20 pts): Fooled partner or defaulted if single
+      let partnerAwarded = false;
+      if (!currentTarget.partner) {
+        playerStats[currentTarget.id].score += POINTS.FOOLED_PARTNER;
+        playerStats[currentTarget.id].disguisePoints += POINTS.FOOLED_PARTNER;
+        ownerRoundPoints += POINTS.FOOLED_PARTNER;
+        partnerAwarded = true;
+      } else {
         const partner = PLAYERS.find(p => p.name === currentTarget.partner);
-        if (partner && currentGuesses[partner.id] && currentGuesses[partner.id] !== currentTarget.id) {
+        if (partner && currentGuesses[partner.id] && currentGuesses[partner.id] !== targetCorrectChoice) {
           playerStats[currentTarget.id].score += POINTS.FOOLED_PARTNER;
           playerStats[currentTarget.id].disguisePoints += POINTS.FOOLED_PARTNER;
           ownerRoundPoints += POINTS.FOOLED_PARTNER;
-          partnerFooled = true;
+          partnerAwarded = true;
         }
       }
 
@@ -614,7 +630,7 @@
       let motherFooled = false;
       if (!currentTarget.isMother) {
         const aditi = PLAYERS.find(p => p.isMother);
-        if (aditi && currentGuesses[aditi.id] && currentGuesses[aditi.id] !== currentTarget.id) {
+        if (aditi && currentGuesses[aditi.id] && currentGuesses[aditi.id] !== targetCorrectChoice) {
           playerStats[currentTarget.id].score += POINTS.FOOLED_MOTHER;
           playerStats[currentTarget.id].disguisePoints += POINTS.FOOLED_MOTHER;
           ownerRoundPoints += POINTS.FOOLED_MOTHER;
@@ -630,7 +646,7 @@
         correctVoterNames,
         wrongVoterNames,
         ownerRoundPoints,
-        partnerFooled,
+        partnerAwarded,
         motherFooled
       };
     }
