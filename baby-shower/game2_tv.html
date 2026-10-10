@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Labour vs. Loving - Big Screen</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <style>
+    @keyframes pop { 0% { transform: scale(0.85); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    .animate-pop { animation: pop 0.35s ease-out forwards; }
+  </style>
+</head>
+<body class="bg-slate-950 text-white min-h-screen flex flex-col font-sans select-none">
+  <header class="px-8 py-4 bg-slate-900 border-b border-slate-800 flex justify-between items-center shadow-md">
+    <div>
+      <h1 class="text-3xl font-black text-rose-400">Labour or Loving? 👶 / ❤️</h1>
+      <p id="round-indicator" class="text-slate-400 text-sm font-semibold tracking-wide uppercase mt-0.5">Lobby Mode</p>
+    </div>
+    <div class="flex items-center space-x-4">
+      <button onclick="resetGamePrompt()" class="bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-slate-400 border border-slate-700 font-bold px-3 py-2 rounded-xl text-xs transition">
+        Reset Game 2
+      </button>
+      <div id="vote-counter" class="bg-slate-800 border border-slate-700 px-5 py-2 rounded-xl text-lg hidden">
+        Locked In: <span id="locked-count" class="font-extrabold text-rose-400">0</span> / <span id="total-voters">0</span>
+      </div>
+      <button id="primary-btn" onclick="nextStage()" class="bg-rose-500 hover:bg-rose-400 active:scale-95 text-slate-950 font-black px-7 py-3 rounded-xl text-lg shadow-lg transition">
+        Start Game 🎮
+      </button>
+    </div>
+  </header>
+
+  <main class="flex-1 flex flex-col items-center justify-center p-6 text-center">
+    <!-- 1. Lobby & Rules Screen -->
+    <div id="view-lobby" class="w-full max-w-4xl space-y-6 animate-pop">
+      <div>
+        <h2 class="text-5xl font-black text-rose-400 tracking-tight">Labour vs. Loving</h2>
+        <p class="text-slate-300 text-lg font-medium mt-2">Can you tell the difference between childbirth expressions and sheer ecstasy?</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch">
+        <div class="md:col-span-5 bg-slate-900/90 border border-slate-800 p-5 rounded-2xl flex flex-col items-center justify-center text-center shadow-xl">
+          <div class="p-3 bg-white rounded-xl shadow-lg mb-3">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://naman33k.github.io/baby-shower/game2_index.html" alt="Scan QR Code" class="w-36 h-36">
+          </div>
+          <span class="text-xs font-black text-rose-400 uppercase tracking-widest mb-1">Scan to Play Game 2</span>
+          <p class="text-xs text-slate-400 break-all font-mono">naman33k.github.io/baby-shower/game2_index.html</p>
+        </div>
+
+        <div class="md:col-span-7 bg-slate-900/90 border border-slate-800 p-6 rounded-2xl text-left flex flex-col justify-center space-y-3 shadow-xl">
+          <h3 class="text-sm font-black text-rose-400 uppercase tracking-wider border-b border-slate-800 pb-2">How It Works</h3>
+          <ul class="space-y-2 text-slate-300 text-sm">
+            <li>• <strong>9 Mystery Expressions</strong> will be shown one at a time on screen.</li>
+            <li>• Vote on your phone: is she <strong>In Labour 👶</strong> or <strong>In Love / Orgasm ❤️</strong>?</li>
+            <li>• Earn <strong>+10 points</strong> for every correct call.</li>
+            <li>• Your 4-digit passcodes remain the exact same (1001–1025).</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Active Stage View -->
+    <div id="view-stage" class="w-full max-w-4xl hidden flex flex-col items-center">
+      <div class="flex flex-col items-center mb-6">
+        <span id="mystery-label" class="text-sm font-bold text-slate-400 mb-2 uppercase tracking-wider">Mystery Expression</span>
+        <img id="mystery-img" class="w-96 h-[26rem] object-cover rounded-3xl border-4 border-rose-400 shadow-2xl bg-slate-900 transition-all duration-300" src="" alt="Mystery Expression">
+      </div>
+
+      <div id="reveal-banner" class="text-5xl font-black mb-6 hidden animate-pop"></div>
+
+      <!-- Reveal Breakdown Grid -->
+      <div id="card-results-grid" class="w-full max-w-3xl grid grid-cols-1 md:grid-cols-2 gap-4 text-left hidden animate-pop">
+        <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+          <p class="text-emerald-400 font-bold mb-2">Got It Right (+10 pts):</p>
+          <div id="list-correct" class="text-sm text-slate-300 space-y-1"></div>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+          <p class="text-rose-400 font-bold mb-2">Fooled (0 pts):</p>
+          <div id="list-wrong" class="text-sm text-slate-300 space-y-1"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Scoreboard / Finale View -->
+    <div id="view-scoreboard" class="w-full max-w-2xl hidden animate-pop">
+      <h2 id="scoreboard-title" class="text-4xl font-black text-rose-400 mb-6">🏆 Leaderboard</h2>
+      <div id="leaderboard-list" class="space-y-2 text-left"></div>
+    </div>
+  </main>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDl0VlOTJl4HayJ5WPRlXqRZtMipyBDg3c",
+      authDomain: "baby-shower-game-e5a47.firebaseapp.com",
+      databaseURL: "https://baby-shower-game-e5a47-default-rtdb.firebaseio.com",
+      projectId: "baby-shower-game-e5a47",
+      storageBucket: "baby-shower-game-e5a47.firebasestorage.app",
+      messagingSenderId: "268637242288",
+      appId: "1:268637242288:web:9bcf6b669e1ff010088c75",
+      measurementId: "G-GD0PY79KMN"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const PLAYERS = [
+      { id: "p1",  name: "Shreshth",  code: "1001", isHost: false },
+      { id: "p2",  name: "Nikita",    code: "1002", isHost: false },
+      { id: "p3",  name: "Chhajlani", code: "1003", isHost: false },
+      { id: "p4",  name: "Eti",       code: "1004", isHost: false },
+      { id: "p5",  name: "Anali",     code: "1005", isHost: false },
+      { id: "p6",  name: "Khush",     code: "1006", isHost: false },
+      { id: "p7",  name: "Shantanu",  code: "1007", isHost: false },
+      { id: "p8",  name: "Hetali",    code: "1008", isHost: false },
+      { id: "p9",  name: "Anna",      code: "1009", isHost: false },
+      { id: "p10", name: "Shreya",    code: "1010", isHost: false },
+      { id: "p11", name: "Vani",      code: "1011", isHost: false },
+      { id: "p12", name: "Saurabh",   code: "1012", isHost: false },
+      { id: "p13", name: "Aru",       code: "1013", isHost: false },
+      { id: "p14", name: "Aditya",    code: "1014", isHost: false },
+      { id: "p15", name: "Sumat",     code: "1015", isHost: false },
+      { id: "p16", name: "Emily",     code: "1016", isHost: false },
+      { id: "p17", name: "Shipra",    code: "1017", isHost: false },
+      { id: "p18", name: "Divyam",    code: "1018", isHost: false },
+      { id: "p19", name: "Vishita",   code: "1019", isHost: false },
+      { id: "p20", name: "Ronak",     code: "1020", isHost: false },
+      { id: "p21", name: "Anjali",    code: "1021", isHost: false },
+      { id: "p22", name: "Aditi",     code: "1022", isHost: false },
+      { id: "p23", name: "Naman",     code: "1023", isHost: true  },
+      { id: "p24", name: "Vibhay",    code: "1024", isHost: false },
+      { id: "p25", name: "Kaustubh",  code: "1025", isHost: false }
+    ];
+
+    const GAME2_ITEMS = [
+      { id: "img1", file: "./labor-vs-loving-images/labour1.jpg", type: "LABOUR", label: "In Labour 👶" },
+      { id: "img2", file: "./labor-vs-loving-images/labour2.jpg", type: "LABOUR", label: "In Labour 👶" },
+      { id: "img3", file: "./labor-vs-loving-images/labour3.jpg", type: "LABOUR", label: "In Labour 👶" },
+      { id: "img4", file: "./labor-vs-loving-images/labour4.jpg", type: "LABOUR", label: "In Labour 👶" },
+      { id: "img5", file: "./labor-vs-loving-images/labour5.jpg", type: "LABOUR", label: "In Labour 👶" },
+      { id: "img6", file: "./labor-vs-loving-images/orgasm1.jpg", type: "LOVING", label: "In Love / Orgasm ❤️" },
+      { id: "img7", file: "./labor-vs-loving-images/orgasm2.jpg", type: "LOVING", label: "In Love / Orgasm ❤️" },
+      { id: "img8", file: "./labor-vs-loving-images/orgasm3.jpg", type: "LOVING", label: "In Love / Orgasm ❤️" },
+      { id: "img9", file: "./labor-vs-loving-images/orgasm4.jpg", type: "LOVING", label: "In Love / Orgasm ❤️" }
+    ];
+
+    const stages = ['GUESSING', 'REVEAL_RESULTS', 'SCOREBOARD'];
+
+    let roundQueue = [];
+    let currentRoundIndex = 0;
+    let stageStep = 0;
+    let currentTarget = null;
+    let scores = {};
+    let currentGuesses = {};
+
+    async function init() {
+      const scoreSnap = await db.ref('game2Scores').once('value');
+      if (scoreSnap.exists()) {
+        scores = scoreSnap.val();
+      } else {
+        PLAYERS.forEach(p => { scores[p.id] = 0; });
+        await db.ref('game2Scores').set(scores);
+      }
+
+      const queueSnap = await db.ref('game2Queue').once('value');
+      roundQueue = queueSnap.val() || [];
+
+      const stateSnap = await db.ref('game2State').once('value');
+      const savedState = stateSnap.val() || { stage: 'LOBBY' };
+
+      if (!savedState.stage || savedState.stage === 'LOBBY') {
+        renderLobbyScreen();
+      } else if (savedState.stage === 'GAME_OVER') {
+        renderFinalScreen();
+      } else {
+        currentRoundIndex = roundQueue.findIndex(id => id === savedState.currentItemId);
+        if (currentRoundIndex === -1) currentRoundIndex = 0;
+        stageStep = stages.indexOf(savedState.stage);
+        if (stageStep === -1) stageStep = 0;
+        currentTarget = GAME2_ITEMS.find(item => item.id === roundQueue[currentRoundIndex]);
+        renderStageView(savedState.stage);
+      }
+
+      db.ref('game2Guesses').on('value', snap => {
+        currentGuesses = snap.val() || {};
+        updateVoteCount();
+      });
+    }
+
+    function renderLobbyScreen() {
+      document.getElementById('view-lobby').classList.remove('hidden');
+      document.getElementById('view-stage').classList.add('hidden');
+      document.getElementById('view-scoreboard').classList.add('hidden');
+      document.getElementById('vote-counter').classList.add('hidden');
+      document.getElementById('round-indicator').innerText = "Lobby Mode";
+      document.getElementById('primary-btn').innerText = "Start Game 🎮";
+    }
+
+    function shuffleArray(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function updateVoteCount() {
+      if (!currentTarget) return;
+      const count = Object.keys(currentGuesses).length;
+      const eligibleVoters = PLAYERS.filter(p => !p.isHost).length;
+      document.getElementById('locked-count').innerText = count;
+      document.getElementById('total-voters').innerText = eligibleVoters;
+    }
+
+    async function nextStage() {
+      const stateSnap = await db.ref('game2State').once('value');
+      const currentState = (stateSnap.val() && stateSnap.val().stage) ? stateSnap.val().stage : 'LOBBY';
+
+      if (currentState === 'LOBBY') {
+        roundQueue = shuffleArray(GAME2_ITEMS.map(i => i.id));
+        await db.ref('game2Queue').set(roundQueue);
+        currentRoundIndex = 0;
+        stageStep = 0;
+      } else {
+        stageStep++;
+        if (stageStep >= stages.length) {
+          currentRoundIndex++;
+          stageStep = 0;
+          if (currentRoundIndex >= roundQueue.length) {
+            await db.ref('game2State').set({ stage: 'GAME_OVER', currentItemId: null });
+            renderFinalScreen();
+            return;
+          }
+        }
+      }
+
+      const stage = stages[stageStep];
+      currentTarget = GAME2_ITEMS.find(item => item.id === roundQueue[currentRoundIndex]);
+
+      if (stage === 'GUESSING') {
+        currentGuesses = {};
+        await db.ref('game2Guesses').remove();
+      }
+
+      await db.ref('game2State').set({
+        stage: stage,
+        currentItemId: currentTarget.id
+      });
+
+      renderStageView(stage);
+    }
+
+    function renderStageView(stage) {
+      document.getElementById('view-lobby').classList.add('hidden');
+      document.getElementById('view-stage').classList.remove('hidden');
+      document.getElementById('view-scoreboard').classList.add('hidden');
+      document.getElementById('vote-counter').classList.remove('hidden');
+
+      const btn = document.getElementById('primary-btn');
+      document.getElementById('round-indicator').innerText = `Expression ${currentRoundIndex + 1} of ${roundQueue.length}`;
+
+      if (stage === 'GUESSING') {
+        document.getElementById('mystery-img').src = currentTarget.file;
+        document.getElementById('mystery-img').className = "w-96 h-[26rem] object-cover rounded-3xl border-4 border-rose-400 shadow-2xl bg-slate-900";
+        document.getElementById('reveal-banner').classList.add('hidden');
+        document.getElementById('card-results-grid').classList.add('hidden');
+        updateVoteCount();
+        btn.innerText = "Lock Votes & Reveal";
+      }
+      else if (stage === 'REVEAL_RESULTS') {
+        const roundData = calculateScores();
+        const banner = document.getElementById('reveal-banner');
+        banner.classList.remove('hidden');
+
+        if (currentTarget.type === 'LABOUR') {
+          banner.innerText = "👶 It's LABOUR!";
+          banner.className = "text-5xl font-black text-amber-400 mb-6 animate-pop";
+          document.getElementById('mystery-img').className = "w-96 h-[26rem] object-cover rounded-3xl border-4 border-amber-400 shadow-2xl bg-slate-900";
+        } else {
+          banner.innerText = "❤️ It's LOVING / ORGASM!";
+          banner.className = "text-5xl font-black text-rose-500 mb-6 animate-pop";
+          document.getElementById('mystery-img').className = "w-96 h-[26rem] object-cover rounded-3xl border-4 border-rose-500 shadow-2xl bg-slate-900";
+        }
+
+        document.getElementById('card-results-grid').classList.remove('hidden');
+        const listCorrect = document.getElementById('list-correct');
+        const listWrong = document.getElementById('list-wrong');
+
+        listCorrect.innerHTML = roundData.correctNames.length > 0
+          ? roundData.correctNames.map(n => `<div class="text-emerald-300 font-semibold">✓ ${n}</div>`).join('')
+          : `<div class="text-slate-500 italic">Nobody called it right!</div>`;
+
+        listWrong.innerHTML = roundData.wrongNames.length > 0
+          ? roundData.wrongNames.map(item => `<div class="flex justify-between text-slate-300"><span>✗ ${item.name}</span><span class="text-xs text-slate-500 font-mono">(Guessed: ${item.guessed})</span></div>`).join('')
+          : `<div class="text-slate-500 italic">Nobody was fooled!</div>`;
+
+        btn.innerText = "Show Standings";
+      }
+      else if (stage === 'SCOREBOARD') {
+        document.getElementById('view-stage').classList.add('hidden');
+        document.getElementById('view-scoreboard').classList.remove('hidden');
+        document.getElementById('vote-counter').classList.add('hidden');
+
+        const ranked = PLAYERS
+          .filter(p => !p.isHost)
+          .map(p => ({ name: p.name, score: scores[p.id] || 0 }))
+          .sort((a, b) => b.score - a.score);
+
+        const list = document.getElementById('leaderboard-list');
+        list.innerHTML = ranked.map((p, idx) => `
+          <div class="flex justify-between items-center px-5 py-3 rounded-xl ${idx === 0 ? 'bg-rose-500 text-slate-950 font-black' : 'bg-slate-900 border border-slate-800 font-medium'}">
+            <span class="text-lg">#${idx + 1} ${p.name}</span>
+            <span class="text-xl font-mono">${p.score} pts</span>
+          </div>
+        `).join('');
+
+        const isLastRound = (currentRoundIndex + 1 >= roundQueue.length);
+        btn.innerText = isLastRound ? "View Finale 🏆" : "Next Expression ➡️";
+      }
+    }
+
+    function calculateScores() {
+      const correctNames = [];
+      const wrongNames = [];
+
+      Object.keys(currentGuesses).forEach(voterId => {
+        const guess = currentGuesses[voterId];
+        const voter = PLAYERS.find(p => p.id === voterId);
+        if (!voter) return;
+
+        if (guess === currentTarget.type) {
+          scores[voterId] = (scores[voterId] || 0) + 10;
+          correctNames.push(voter.name);
+        } else {
+          wrongNames.push({
+            name: voter.name,
+            guessed: guess === 'LABOUR' ? 'Labour' : 'Loving'
+          });
+        }
+      });
+
+      db.ref('game2Scores').set(scores);
+
+      return { correctNames, wrongNames };
+    }
+
+    function renderFinalScreen() {
+      document.getElementById('view-lobby').classList.add('hidden');
+      document.getElementById('view-stage').classList.add('hidden');
+      document.getElementById('view-scoreboard').classList.remove('hidden');
+      document.getElementById('vote-counter').classList.add('hidden');
+      document.getElementById('round-indicator').innerText = "Game 2 Complete";
+
+      const btn = document.getElementById('primary-btn');
+      btn.innerText = "Completed 🎉";
+      btn.disabled = true;
+      btn.className = "bg-slate-800 text-slate-500 font-black px-7 py-3 rounded-xl text-lg cursor-not-allowed";
+
+      document.getElementById('scoreboard-title').innerText = "🎉 Final Standings: Labour or Loving? 🎉";
+
+      const ranked = PLAYERS
+        .filter(p => !p.isHost)
+        .map(p => ({ name: p.name, score: scores[p.id] || 0 }))
+        .sort((a, b) => b.score - a.score);
+
+      const list = document.getElementById('leaderboard-list');
+      list.innerHTML = ranked.map((p, idx) => `
+        <div class="flex justify-between items-center px-5 py-3 rounded-xl ${idx === 0 ? 'bg-amber-400 text-slate-950 font-black' : 'bg-slate-900 border border-slate-800 font-medium'}">
+          <span class="text-lg">#${idx + 1} ${p.name}</span>
+          <span class="text-xl font-mono">${p.score} pts</span>
+        </div>
+      `).join('');
+    }
+
+    async function resetGamePrompt() {
+      if (!confirm("Reset all Game 2 scores and return to Lobby?")) return;
+      PLAYERS.forEach(p => { scores[p.id] = 0; });
+      await db.ref('game2Scores').set(scores);
+      await db.ref('game2Guesses').remove();
+      await db.ref('game2Queue').remove();
+      await db.ref('game2State').set({ stage: 'LOBBY', currentItemId: null });
+      currentRoundIndex = 0;
+      stageStep = 0;
+      renderLobbyScreen();
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Labour or Loving? - Player</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body class="bg-slate-950 text-white min-h-screen p-4 flex flex-col items-center justify-center font-sans select-none">
+
+  <!-- 1. Passcode Login -->
+  <div id="login-card" class="w-full max-w-sm bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-4">
+    <h1 class="text-2xl font-bold text-center text-rose-400">Labour or Loving? 👶❤️</h1>
+    <p class="text-xs text-slate-400 text-center">Enter your 4-digit code (1001–1025)</p>
+    <input id="passcode-input" type="text" maxlength="4" placeholder="1001"
+      class="w-full text-center text-3xl tracking-widest bg-slate-800 border border-slate-700 rounded-xl py-3 focus:outline-none focus:border-rose-400 font-mono">
+    <button onclick="handleLogin()" class="w-full bg-rose-500 hover:bg-rose-400 active:scale-95 text-slate-950 font-bold py-3.5 rounded-xl transition">
+      Enter Game 2
+    </button>
+  </div>
+
+  <!-- 2. Active Screen -->
+  <div id="game-card" class="w-full max-w-sm hidden flex flex-col space-y-4">
+    <div class="flex justify-between items-center bg-slate-900 p-3.5 rounded-xl border border-slate-800">
+      <div>
+        <p class="text-xs text-slate-400 uppercase tracking-wide">Player</p>
+        <p id="player-name" class="font-black text-rose-400 text-lg"></p>
+      </div>
+      <div class="text-right">
+        <p class="text-xs text-slate-400 uppercase tracking-wide">Score</p>
+        <p id="player-score" class="font-black text-xl font-mono text-emerald-400">0</p>
+      </div>
+    </div>
+
+    <!-- Active Voting Box -->
+    <div id="voting-box" class="bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-4 text-center">
+      <h2 class="text-lg font-bold">What are you seeing?</h2>
+
+      <div class="grid grid-cols-1 gap-3">
+        <!-- Option A: Labour -->
+        <button id="btn-labour" onclick="selectChoice('LABOUR')" class="choice-btn p-4 rounded-2xl bg-slate-800 border-2 border-slate-700 hover:border-amber-400 flex items-center justify-center space-x-3 transition active:scale-95">
+          <span class="text-3xl">👶</span>
+          <div class="text-left">
+            <p class="font-black text-lg text-amber-300">In Labour</p>
+            <p class="text-xs text-slate-400">Childbirth pain</p>
+          </div>
+        </button>
+
+        <!-- Option B: Loving -->
+        <button id="btn-loving" onclick="selectChoice('LOVING')" class="choice-btn p-4 rounded-2xl bg-slate-800 border-2 border-slate-700 hover:border-rose-400 flex items-center justify-center space-x-3 transition active:scale-95">
+          <span class="text-3xl">❤️</span>
+          <div class="text-left">
+            <p class="font-black text-lg text-rose-300">In Love / Orgasm</p>
+            <p class="text-xs text-slate-400">Sheer ecstasy</p>
+          </div>
+        </button>
+      </div>
+
+      <button id="lock-btn" disabled onclick="submitVote()" class="w-full bg-slate-800 text-slate-500 font-bold py-3.5 rounded-xl transition">
+        Make a Choice
+      </button>
+    </div>
+
+    <!-- Frozen Screen -->
+    <div id="wait-box" class="bg-slate-900 p-7 rounded-2xl border border-slate-800 text-center space-y-3 hidden">
+      <div id="wait-icon" class="text-4xl">⏳</div>
+      <h2 id="wait-title" class="text-lg font-bold text-rose-400">Waiting for Next Round</h2>
+      <p id="wait-subtitle" class="text-xs text-slate-400">Watch the TV for the reveal!</p>
+    </div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDl0VlOTJl4HayJ5WPRlXqRZtMipyBDg3c",
+      authDomain: "baby-shower-game-e5a47.firebaseapp.com",
+      databaseURL: "https://baby-shower-game-e5a47-default-rtdb.firebaseio.com",
+      projectId: "baby-shower-game-e5a47",
+      storageBucket: "baby-shower-game-e5a47.firebasestorage.app",
+      messagingSenderId: "268637242288",
+      appId: "1:268637242288:web:9bcf6b669e1ff010088c75",
+      measurementId: "G-GD0PY79KMN"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const PLAYERS = [
+      { id: "p1",  name: "Shreshth",  code: "1001" },
+      { id: "p2",  name: "Nikita",    code: "1002" },
+      { id: "p3",  name: "Chhajlani", code: "1003" },
+      { id: "p4",  name: "Eti",       code: "1004" },
+      { id: "p5",  name: "Anali",     code: "1005" },
+      { id: "p6",  name: "Khush",     code: "1006" },
+      { id: "p7",  name: "Shantanu",  code: "1007" },
+      { id: "p8",  name: "Hetali",    code: "1008" },
+      { id: "p9",  name: "Anna",      code: "1009" },
+      { id: "p10", name: "Shreya",    code: "1010" },
+      { id: "p11", name: "Vani",      code: "1011" },
+      { id: "p12", name: "Saurabh",   code: "1012" },
+      { id: "p13", name: "Aru",       code: "1013" },
+      { id: "p14", name: "Aditya",    code: "1014" },
+      { id: "p15", name: "Sumat",     code: "1015" },
+      { id: "p16", name: "Emily",     code: "1016" },
+      { id: "p17", name: "Shipra",    code: "1017" },
+      { id: "p18", name: "Divyam",    code: "1018" },
+      { id: "p19", name: "Vishita",   code: "1019" },
+      { id: "p20", name: "Ronak",     code: "1020" },
+      { id: "p21", name: "Anjali",    code: "1021" },
+      { id: "p22", name: "Aditi",     code: "1022" },
+      { id: "p23", name: "Naman",     code: "1023", isHost: true },
+      { id: "p24", name: "Vibhay",    code: "1024" },
+      { id: "p25", name: "Kaustubh",  code: "1025" }
+    ];
+
+    let me = null;
+    let selectedChoice = null;
+    let currentItemId = null;
+
+    function init() {
+      const savedCode = localStorage.getItem('guest_passcode');
+      if (savedCode) {
+        document.getElementById('passcode-input').value = savedCode;
+        handleLogin();
+      }
+    }
+
+    function handleLogin() {
+      const code = document.getElementById('passcode-input').value.trim();
+      const user = PLAYERS.find(p => p.code === code);
+
+      if (!user) {
+        alert('Invalid passcode. Please enter your 4-digit code.');
+        return;
+      }
+
+      me = user;
+      localStorage.setItem('guest_passcode', code);
+      document.getElementById('login-card').classList.add('hidden');
+      document.getElementById('game-card').classList.remove('hidden');
+      document.getElementById('player-name').innerText = me.name;
+
+      db.ref(`game2Scores/${me.id}`).on('value', snap => {
+        document.getElementById('player-score').innerText = snap.val() || 0;
+      });
+
+      db.ref('game2State').on('value', snap => {
+        const state = snap.val() || {};
+        syncGameState(state);
+      });
+    }
+
+    async function syncGameState(state) {
+      currentItemId = state.currentItemId;
+
+      if (state.stage === 'GAME_OVER') {
+        showWaiting("🏆", "Game Complete!", "Look at the TV to see the final winners!");
+        return;
+      }
+
+      if (state.stage === 'GUESSING') {
+        const snap = await db.ref(`game2Guesses/${me.id}`).once('value');
+        if (snap.exists()) {
+          showWaiting("🔒", "Choice Locked In!", "Look at the TV screen for the reveal...");
+        } else {
+          showVoting();
+        }
+      } else {
+        showWaiting("🔒", "Votes Closed", "Watch the TV for the reveal!");
+      }
+    }
+
+    function showVoting() {
+      document.getElementById('voting-box').classList.remove('hidden');
+      document.getElementById('wait-box').classList.add('hidden');
+
+      selectedChoice = null;
+      document.querySelectorAll('.choice-btn').forEach(btn => {
+        btn.classList.remove('border-rose-400', 'border-amber-400', 'bg-rose-950/40', 'bg-amber-950/40');
+      });
+
+      const lockBtn = document.getElementById('lock-btn');
+      lockBtn.disabled = true;
+      lockBtn.className = "w-full bg-slate-800 text-slate-500 font-bold py-3.5 rounded-xl transition";
+      lockBtn.innerText = "Make a Choice";
+    }
+
+    function selectChoice(type) {
+      selectedChoice = type;
+      const bLabour = document.getElementById('btn-labour');
+      const bLoving = document.getElementById('btn-loving');
+
+      if (type === 'LABOUR') {
+        bLabour.className = "choice-btn p-4 rounded-2xl bg-amber-950/40 border-2 border-amber-400 flex items-center justify-center space-x-3 transition active:scale-95";
+        bLoving.className = "choice-btn p-4 rounded-2xl bg-slate-800 border-2 border-slate-700 hover:border-rose-400 flex items-center justify-center space-x-3 transition active:scale-95";
+      } else {
+        bLoving.className = "choice-btn p-4 rounded-2xl bg-rose-950/40 border-2 border-rose-400 flex items-center justify-center space-x-3 transition active:scale-95";
+        bLabour.className = "choice-btn p-4 rounded-2xl bg-slate-800 border-2 border-slate-700 hover:border-amber-400 flex items-center justify-center space-x-3 transition active:scale-95";
+      }
+
+      const lockBtn = document.getElementById('lock-btn');
+      lockBtn.disabled = false;
+      lockBtn.className = "w-full bg-rose-500 hover:bg-rose-400 active:scale-95 text-slate-950 font-black py-3.5 rounded-xl transition";
+      lockBtn.innerText = `Lock In: ${type === 'LABOUR' ? 'In Labour 👶' : 'In Love ❤️'}`;
+    }
+
+    async function submitVote() {
+      if (!selectedChoice || !currentItemId) return;
+      await db.ref(`game2Guesses/${me.id}`).set(selectedChoice);
+      showWaiting("🔒", "Choice Locked In!", "Look at the TV screen for the reveal...");
+    }
+
+    function showWaiting(icon, title, subtitle) {
+      document.getElementById('voting-box').classList.add('hidden');
+      const waitBox = document.getElementById('wait-box');
+      waitBox.classList.remove('hidden');
+      document.getElementById('wait-icon').innerText = icon;
+      document.getElementById('wait-title').innerText = title;
+      document.getElementById('wait-subtitle').innerText = subtitle;
+    }
+
+    init();
+  </script>
+</body>
+</html>
