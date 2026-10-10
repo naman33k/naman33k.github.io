@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Baby Shower Game - Big Screen</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <style>
+    @keyframes pop { 0% { transform: scale(0.85); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    .animate-pop { animation: pop 0.35s ease-out forwards; }
+  </style>
+</head>
+<body class="bg-slate-950 text-white min-h-screen flex flex-col font-sans select-none">
+  <header class="px-8 py-4 bg-slate-900 border-b border-slate-800 flex justify-between items-center shadow-md">
+    <div>
+      <h1 class="text-3xl font-black text-amber-400">Guess The Baby! 🍼</h1>
+      <p id="round-indicator" class="text-slate-400 text-sm font-semibold tracking-wide uppercase mt-0.5">Admin Setup</p>
+    </div>
+    <div class="flex items-center space-x-4">
+      <button onclick="resetGamePrompt()" class="bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-slate-400 border border-slate-700 font-bold px-3 py-2 rounded-xl text-xs transition">
+        Reset Entire Game
+      </button>
+      <div id="vote-counter" class="bg-slate-800 border border-slate-700 px-5 py-2 rounded-xl text-lg hidden">
+        Locked In: <span id="locked-count" class="font-extrabold text-amber-400">0</span> / <span id="total-voters">0</span>
+      </div>
+      <button id="primary-btn" onclick="nextStage()" class="bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black px-7 py-3 rounded-xl text-lg shadow-lg transition">
+        Confirm & Go to Lobby
+      </button>
+    </div>
+  </header>
+
+  <main class="flex-1 flex flex-col items-center justify-center p-6 text-center">
+    <!-- 1. Host Setup View -->
+    <div id="view-setup" class="w-full max-w-5xl space-y-6">
+      <div>
+        <h2 class="text-4xl font-black tracking-tight mb-2">Host Photo Setup</h2>
+        <p class="text-slate-400 text-base">Select who has a baby photo ready for the guessing queue. Unchecked players can still play and vote on their phones.</p>
+      </div>
+
+      <div class="bg-slate-900/80 border border-slate-800 p-6 rounded-2xl">
+        <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
+          <span class="text-xs uppercase font-bold text-slate-400 tracking-wider">Include in Baby Photo Rounds</span>
+          <span id="active-queue-count" class="text-xs font-bold text-amber-400">24 / 24 Photos Active</span>
+        </div>
+        <div id="setup-roster" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 text-left"></div>
+      </div>
+    </div>
+
+    <!-- 2. Lobby & Rules View with Passcodes & QR -->
+    <div id="view-lobby" class="w-full max-w-5xl space-y-5 hidden animate-pop">
+      <div>
+        <h2 class="text-4xl font-black text-amber-400 tracking-tight">Join The Game! 🍼</h2>
+        <p class="text-slate-300 text-sm font-medium mt-1">Scan the QR code with your phone and find your 4-digit code in the table below.</p>
+      </div>
+
+      <!-- QR & Passcode Directory Block -->
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch">
+        <!-- QR Code Card -->
+        <div class="md:col-span-4 bg-slate-900/90 border border-slate-800 p-5 rounded-2xl flex flex-col items-center justify-center text-center shadow-xl">
+          <div class="p-3 bg-white rounded-xl shadow-lg mb-3">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://naman33k.github.io/baby-shower/index.html" alt="Scan QR Code" class="w-40 h-40">
+          </div>
+          <span class="text-xs font-black text-amber-400 uppercase tracking-widest mb-1">Scan to Play</span>
+          <p class="text-xs text-slate-400 break-all font-mono">naman33k.github.io/baby-shower/index.html</p>
+        </div>
+
+        <!-- 3-Column Passcodes Directory -->
+        <div class="md:col-span-8 bg-slate-900/90 border border-slate-800 p-5 rounded-2xl flex flex-col justify-between shadow-xl text-left">
+          <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-800">
+            <h3 class="text-xs font-black text-slate-300 uppercase tracking-wider">Guest Passcode Directory</h3>
+            <span id="lobby-queue-info" class="text-xs text-amber-400 font-bold"></span>
+          </div>
+          <div id="passcode-table-container" class="grid grid-cols-3 gap-x-4 gap-y-1.5 text-xs"></div>
+        </div>
+      </div>
+
+      <!-- Scoring Rules Card -->
+      <div class="bg-slate-900/90 border border-slate-800 p-5 rounded-2xl text-left space-y-3 shadow-xl">
+        <h3 class="text-xs font-black text-amber-400 uppercase tracking-wider border-b border-slate-800 pb-2">Scoring Rules</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-slate-200 text-xs">
+          <div class="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+            <p class="font-extrabold text-emerald-400 text-sm mb-0.5">🎯 Guess Right: +10 pts</p>
+            <p class="text-slate-400">Earned when you identify the baby on screen.</p>
+          </div>
+          <div class="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+            <p class="font-extrabold text-amber-400 text-sm mb-0.5">🎭 Fooling: +5 pts / person</p>
+            <p class="text-slate-400">Given to the baby owner for each wrong vote.</p>
+          </div>
+          <div class="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+            <p class="font-extrabold text-rose-400 text-sm mb-0.5">💍 Fooled Partner: +50 pts</p>
+            <p class="text-slate-400">Bonus if your partner guesses wrong.</p>
+          </div>
+          <div class="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+            <p class="font-extrabold text-purple-400 text-sm mb-0.5">👑 Fooled Aditi: +20 pts</p>
+            <p class="text-slate-400">Bonus if the mother-to-be is tricked.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Active Stage View -->
+    <div id="view-stage" class="w-full max-w-6xl hidden flex flex-col items-center">
+      <div id="photos-row" class="flex justify-center items-center gap-6 mb-6">
+        <!-- Shown / Decoy Baby Photo -->
+        <div id="box-baby" class="flex flex-col items-center">
+          <span id="baby-label" class="text-sm font-bold text-slate-400 mb-2 uppercase tracking-wider">Baby Photo</span>
+          <img id="baby-img" onerror="this.src='https://placehold.co/320x384/1e293b/f8fafc?text=Baby+Photo+Missing'" class="w-80 h-96 object-cover rounded-2xl border-4 border-amber-400 shadow-2xl bg-slate-900 transition-all duration-300" src="" alt="Baby">
+        </div>
+
+        <!-- Real Baby Photo for Emily -->
+        <div id="box-real-baby" class="flex flex-col items-center hidden animate-pop">
+          <span class="text-sm font-bold text-fuchsia-400 mb-2 uppercase tracking-wider">Real Baby Photo!</span>
+          <img id="real-baby-img" onerror="this.src='https://placehold.co/320x384/1e293b/f8fafc?text=Real+Baby+Missing'" class="w-64 h-80 object-cover rounded-2xl border-4 border-fuchsia-400 shadow-2xl bg-slate-900" src="" alt="Real Baby">
+        </div>
+
+        <!-- Adult Photo -->
+        <div id="adult-box" class="flex flex-col items-center hidden animate-pop">
+          <span id="adult-label" class="text-sm font-bold text-emerald-400 mb-2 uppercase tracking-wider">Grown Up!</span>
+          <img id="adult-img" onerror="this.src='https://placehold.co/320x384/1e293b/f8fafc?text=Adult+Photo+Missing'" class="w-80 h-96 object-cover rounded-2xl border-4 border-emerald-400 shadow-2xl bg-slate-900 transition-all duration-300" src="" alt="Adult">
+        </div>
+      </div>
+
+      <div id="identity-banner" class="text-5xl font-black text-emerald-400 mb-6 hidden animate-pop"></div>
+
+      <!-- Reveal Breakdown Cards -->
+      <div id="reveal-cards" class="w-full max-w-3xl space-y-3">
+        <div id="card-emily-trick" class="p-4 rounded-xl text-2xl font-bold border border-fuchsia-500 bg-fuchsia-950/60 text-fuchsia-300 hidden animate-pop"></div>
+        <div id="card-owner-summary" class="p-4 rounded-xl text-xl font-bold bg-amber-950/40 border border-amber-500 text-amber-300 hidden animate-pop text-left"></div>
+        
+        <div id="card-results-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-left hidden animate-pop">
+          <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+            <p class="text-emerald-400 font-bold mb-2">Guessed Correctly (+10 pts):</p>
+            <div id="list-correct" class="text-sm text-slate-300 space-y-1"></div>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+            <p class="text-rose-400 font-bold mb-2">Fooled (+5 pts each to owner):</p>
+            <div id="list-wrong" class="text-sm text-slate-300 space-y-1"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Scoreboard View (Per Round) -->
+    <div id="view-scoreboard" class="w-full max-w-2xl hidden">
+      <h2 class="text-4xl font-black text-amber-400 mb-6">🏆 Leaderboard</h2>
+      <div id="leaderboard-list" class="space-y-2 text-left"></div>
+    </div>
+
+    <!-- 5. Finale & Awards View (End of Game) -->
+    <div id="view-finale" class="w-full max-w-4xl hidden space-y-8 animate-pop">
+      <div>
+        <h2 class="text-5xl font-black text-amber-400 mb-2">🎉 Game Complete! 🎉</h2>
+        <p class="text-slate-300 text-xl font-semibold">Here are the champions of the baby shower!</p>
+      </div>
+
+      <!-- Superlative Cards Podium -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Best Guesser -->
+        <div class="bg-slate-900/90 border-2 border-emerald-400 p-6 rounded-2xl text-center shadow-2xl relative overflow-hidden">
+          <div class="text-4xl mb-2">🎯</div>
+          <p class="text-xs font-black uppercase text-emerald-400 tracking-widest">Best Guesser</p>
+          <p id="award-guesser-name" class="text-3xl font-black text-white mt-1">---</p>
+          <p id="award-guesser-stat" class="text-sm text-slate-400 mt-1 font-mono">0 pts earned from guesses</p>
+        </div>
+
+        <!-- Master of Disguise -->
+        <div class="bg-slate-900/90 border-2 border-fuchsia-400 p-6 rounded-2xl text-center shadow-2xl relative overflow-hidden">
+          <div class="text-4xl mb-2">🎭</div>
+          <p class="text-xs font-black uppercase text-fuchsia-400 tracking-widest">Master of Disguise</p>
+          <p id="award-disguise-name" class="text-3xl font-black text-white mt-1">---</p>
+          <p id="award-disguise-stat" class="text-sm text-slate-400 mt-1 font-mono">Fooled 0 people (0 pts)</p>
+        </div>
+      </div>
+
+      <!-- Full Ranked Table with Breakdown -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-left">
+        <h3 class="text-xl font-black text-amber-400 uppercase tracking-wider mb-4 border-b border-slate-800 pb-2">Final Standings</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="text-slate-400 border-b border-slate-800 uppercase text-xs">
+              <tr>
+                <th class="pb-3">Rank & Player</th>
+                <th class="pb-3 text-center">Guessing Pts</th>
+                <th class="pb-3 text-center">Disguise Pts</th>
+                <th class="pb-3 text-center">People Fooled</th>
+                <th class="pb-3 text-right">Total Score</th>
+              </tr>
+            </thead>
+            <tbody id="finale-table-body" class="divide-y divide-slate-800/60 font-medium"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDl0VlOTJl4HayJ5WPRlXqRZtMipyBDg3c",
+      authDomain: "baby-shower-game-e5a47.firebaseapp.com",
+      databaseURL: "https://baby-shower-game-e5a47-default-rtdb.firebaseio.com",
+      projectId: "baby-shower-game-e5a47",
+      storageBucket: "baby-shower-game-e5a47.firebasestorage.app",
+      messagingSenderId: "268637242288",
+      appId: "1:268637242288:web:9bcf6b669e1ff010088c75",
+      measurementId: "G-GD0PY79KMN"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const POINTS = {
+      CORRECT: 10,
+      FOOLED_EACH: 5,
+      FOOLED_PARTNER: 50,
+      FOOLED_MOTHER: 20
+    };
+
+    const PLAYERS = [
+      { id: "p1",  name: "Shreshth",  code: "1001", partner: "Nikita",   isMother: false, isHost: false, baby: "./images/shreshth_baby.jpg",  adult: "./images/shreshth_adult.jpg" },
+      { id: "p2",  name: "Nikita",    code: "1002", partner: "Shreshth", isMother: false, isHost: false, baby: "./images/nikita_baby.jpg",    adult: "./images/nikita_adult.jpg" },
+      { id: "p3",  name: "Chhajlani", code: "1003", partner: "Eti",      isMother: false, isHost: false, baby: "./images/chhajlani_baby.jpg", adult: "./images/chhajlani_adult.jpg" },
+      { id: "p4",  name: "Eti",       code: "1004", partner: "Chhajlani",isMother: false, isHost: false, baby: "./images/eti_baby.jpg",       adult: "./images/eti_adult.jpg" },
+      { id: "p5",  name: "Anali",     code: "1005", partner: null,       isMother: false, isHost: false, baby: "./images/anali_baby.jpg",     adult: "./images/anali_adult.jpg" },
+      { id: "p6",  name: "Khush",     code: "1006", partner: null,       isMother: false, isHost: false, baby: "./images/khush_baby.jpg",     adult: "./images/khush_adult.jpg" },
+      { id: "p7",  name: "Shantanu",  code: "1007", partner: "Hetali",   isMother: false, isHost: false, baby: "./images/shantanu_baby.jpg",  adult: "./images/shantanu_adult.jpg" },
+      { id: "p8",  name: "Hetali",    code: "1008", partner: "Shantanu", isMother: false, isHost: false, baby: "./images/hetali_baby.jpg",    adult: "./images/hetali_adult.jpg" },
+      { id: "p9",  name: "Anna",      code: "1009", partner: "Shreya",   isMother: false, isHost: false, baby: "./images/anna_baby.jpg",      adult: "./images/anna_adult.jpg" },
+      { id: "p10", name: "Shreya",    code: "1010", partner: "Anna",     isMother: false, isHost: false, baby: "./images/shreya_baby.jpg",    adult: "./images/shreya_adult.jpg" },
+      { id: "p11", name: "Vani",      code: "1011", partner: "Saurabh",  isMother: false, isHost: false, baby: "./images/vani_baby.jpg",      adult: "./images/vani_adult.jpg" },
+      { id: "p12", name: "Saurabh",   code: "1012", partner: "Vani",     isMother: false, isHost: false, baby: "./images/saurabh_baby.jpg",   adult: "./images/saurabh_adult.jpg" },
+      { id: "p13", name: "Aru",       code: "1013", partner: "Aditya",   isMother: false, isHost: false, baby: "./images/aru_baby.jpg",       adult: "./images/aru_adult.jpg" },
+      { id: "p14", name: "Aditya",    code: "1014", partner: "Aru",      isMother: false, isHost: false, baby: "./images/aditya_baby.jpg",    adult: "./images/aditya_adult.jpg" },
+      { id: "p15", name: "Sumat",     code: "1015", partner: "Emily",    isMother: false, isHost: false, baby: "./images/sumat_baby.jpg",     adult: "./images/sumat_adult.jpg" },
+      { id: "p16", name: "Emily",     code: "1016", partner: "Sumat",    isMother: false, isHost: false, baby: "./images/emily_baby_fake.jpg",adult: "./images/emily_adult.jpg", realBaby: "./images/emily_baby_real.jpg" },
+      { id: "p17", name: "Shipra",    code: "1017", partner: null,       isMother: false, isHost: false, baby: "./images/shipra_baby.jpg",    adult: "./images/shipra_adult.jpg" },
+      { id: "p18", name: "Divyam",    code: "1018", partner: "Vishita",  isMother: false, isHost: false, baby: "./images/divyam_baby.jpg",    adult: "./images/divyam_adult.jpg" },
+      { id: "p19", name: "Vishita",   code: "1019", partner: "Divyam",   isMother: false, isHost: false, baby: "./images/vishita_baby.jpg",   adult: "./images/vishita_adult.jpg" },
+      { id: "p20", name: "Ronak",     code: "1020", partner: "Anjali",   isMother: false, isHost: false, baby: "./images/ronak_baby.jpg",     adult: "./images/ronak_adult.jpg" },
+      { id: "p21", name: "Anjali",    code: "1021", partner: "Ronak",    isMother: false, isHost: false, baby: "./images/anjali_baby.jpg",    adult: "./images/anjali_adult.jpg" },
+      { id: "p22", name: "Aditi",     code: "1022", partner: "Naman",    isMother: true,  isHost: false, baby: "./images/aditi_baby.jpg",     adult: "./images/aditi_adult.jpg" },
+      { id: "p23", name: "Naman",     code: "1023", partner: "Aditi",    isMother: false, isHost: true,  baby: "./images/naman_baby.jpg",     adult: "./images/naman_adult.jpg" },
+      { id: "p24", name: "Vibhay",    code: "1024", partner: null,       isMother: false, isHost: false, baby: "./images/vibhay_baby.jpg",    adult: "./images/vibhay_adult.jpg" }
+    ];
+
+    const roundStages = [
+      'GUESSING',
+      'REVEAL_RESULTS',
+      'SCOREBOARD'
+    ];
+
+    let appState = 'SETUP';
+    let roundQueue = [];
+    let currentRoundIndex = 0;
+    let stageStep = 0;
+    let currentTarget = null;
+    let currentGuesses = {};
+    let includedPlayerIds = new Set();
+    let playerStats = {};
+
+    async function init() {
+      const defaultIds = PLAYERS.map(p => p.id);
+      includedPlayerIds = new Set(defaultIds);
+
+      PLAYERS.forEach(p => {
+        playerStats[p.id] = { score: 0, guessPoints: 0, disguisePoints: 0, peopleFooled: 0 };
+      });
+
+      renderSetupScreen();
+
+      try {
+        const incSnap = await db.ref('includedPlayerIds').once('value');
+        const savedList = incSnap.val();
+        if (Array.isArray(savedList) && savedList.length > 0) {
+          includedPlayerIds = new Set(savedList);
+          renderSetupScreen();
+        } else {
+          await db.ref('includedPlayerIds').set(defaultIds);
+        }
+      } catch (err) {
+        console.warn("Using local defaults for photo setup:", err);
+      }
+
+      try {
+        const statsSnap = await db.ref('playerStats').once('value');
+        if (statsSnap.exists()) {
+          playerStats = statsSnap.val();
+        } else {
+          await syncScoresToFirebase();
+        }
+      } catch (err) {
+        console.warn("Stats init fallback:", err);
+      }
+
+      try {
+        const stateSnap = await db.ref('gameState').once('value');
+        const savedState = stateSnap.val() || { stage: 'SETUP' };
+
+        const queueSnap = await db.ref('roundQueue').once('value');
+        roundQueue = queueSnap.val() || [];
+
+        if (!savedState.stage || savedState.stage === 'SETUP') {
+          renderSetupScreen();
+        } else if (savedState.stage === 'LOBBY') {
+          renderLobbyScreen();
+        } else if (savedState.stage === 'GAME_OVER') {
+          renderFinaleScreen();
+        } else {
+          appState = 'IN_GAME';
+          currentRoundIndex = roundQueue.findIndex(id => id === savedState.currentRoundPlayerId);
+          if (currentRoundIndex === -1) currentRoundIndex = 0;
+          stageStep = roundStages.indexOf(savedState.stage);
+          if (stageStep === -1) stageStep = 0;
+          currentTarget = PLAYERS.find(p => p.id === roundQueue[currentRoundIndex]);
+          renderStageView(savedState.stage);
+        }
+      } catch (err) {
+        renderSetupScreen();
+      }
+
+      db.ref('currentGuesses').on('value', snap => {
+        currentGuesses = snap.val() || {};
+        updateVoteCount();
+      });
+    }
+
+    async function syncScoresToFirebase() {
+      const flatScores = {};
+      Object.keys(playerStats).forEach(id => {
+        flatScores[id] = playerStats[id].score;
+      });
+      await db.ref('scores').set(flatScores);
+      await db.ref('playerStats').set(playerStats);
+    }
+
+    function renderSetupScreen() {
+      appState = 'SETUP';
+      document.getElementById('view-setup').classList.remove('hidden');
+      document.getElementById('view-lobby').classList.add('hidden');
+      document.getElementById('view-stage').classList.add('hidden');
+      document.getElementById('view-scoreboard').classList.add('hidden');
+      document.getElementById('view-finale').classList.add('hidden');
+      document.getElementById('vote-counter').classList.add('hidden');
+      document.getElementById('round-indicator').innerText = "Admin Setup";
+      document.getElementById('primary-btn').innerText = "Confirm & Go to Lobby";
+
+      const container = document.getElementById('setup-roster');
+      if (!container) return;
+
+      container.innerHTML = PLAYERS.map(p => {
+        const isChecked = includedPlayerIds.has(p.id) ? 'checked' : '';
+        return `
+          <label class="flex items-center space-x-2 bg-slate-900 border border-slate-800 hover:border-slate-700 p-3 rounded-xl cursor-pointer">
+            <input type="checkbox" ${isChecked} onchange="toggleInclusion('${p.id}', this.checked)" class="w-4 h-4 rounded text-amber-500 bg-slate-800 border-slate-700 focus:ring-0">
+            <span class="text-xs font-semibold ${p.isHost ? 'text-slate-400' : 'text-slate-200'} truncate">${p.name}</span>
+          </label>
+        `;
+      }).join('');
+
+      updateSetupCount();
+    }
+
+    async function toggleInclusion(id, isChecked) {
+      if (isChecked) {
+        includedPlayerIds.add(id);
+      } else {
+        includedPlayerIds.delete(id);
+      }
+      updateSetupCount();
+      await db.ref('includedPlayerIds').set(Array.from(includedPlayerIds));
+    }
+
+    function updateSetupCount() {
+      document.getElementById('active-queue-count').innerText = `${includedPlayerIds.size} / ${PLAYERS.length} Photos Active`;
+    }
+
+    function renderLobbyScreen() {
+      appState = 'LOBBY';
+      document.getElementById('view-setup').classList.add('hidden');
+      document.getElementById('view-lobby').classList.remove('hidden');
+      document.getElementById('view-stage').classList.add('hidden');
+      document.getElementById('view-scoreboard').classList.add('hidden');
+      document.getElementById('view-finale').classList.add('hidden');
+      document.getElementById('vote-counter').classList.add('hidden');
+      document.getElementById('round-indicator').innerText = "Lobby Mode";
+      document.getElementById('primary-btn').innerText = "Start Game 🎮";
+      document.getElementById('lobby-queue-info').innerText = `${includedPlayerIds.size} Photos Queued`;
+
+      // Render 3-column Passcode Table
+      const tableContainer = document.getElementById('passcode-table-container');
+      tableContainer.innerHTML = PLAYERS.map(p => `
+        <div class="flex items-center justify-between p-1.5 px-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
+          <span class="font-medium text-slate-300 truncate">${p.name}</span>
+          <span class="font-mono font-black text-amber-400 text-xs ml-2">${p.code}</span>
+        </div>
+      `).join('');
+    }
+
+    function shuffleArray(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function updateVoteCount() {
+      if (!currentTarget) return;
+      const count = Object.keys(currentGuesses).length;
+      const eligibleVoters = PLAYERS.filter(p => !p.isHost && p.id !== currentTarget.id).length;
+      document.getElementById('locked-count').innerText = count;
+      document.getElementById('total-voters').innerText = eligibleVoters;
+    }
+
+    async function nextStage() {
+      if (appState === 'SETUP') {
+        if (includedPlayerIds.size === 0) {
+          alert('Select at least one participant photo before starting!');
+          return;
+        }
+        await db.ref('gameState').set({ stage: 'LOBBY', currentRoundPlayerId: null });
+        renderLobbyScreen();
+        return;
+      }
+
+      if (appState === 'LOBBY') {
+        appState = 'IN_GAME';
+        roundQueue = shuffleArray(Array.from(includedPlayerIds));
+        await db.ref('roundQueue').set(roundQueue);
+        currentRoundIndex = 0;
+        stageStep = 0;
+      } else if (appState === 'IN_GAME') {
+        stageStep++;
+        if (stageStep >= roundStages.length) {
+          currentRoundIndex++;
+          stageStep = 0;
+          if (currentRoundIndex >= roundQueue.length) {
+            await db.ref('gameState').set({ stage: 'GAME_OVER', currentRoundPlayerId: null });
+            renderFinaleScreen();
+            return;
+          }
+        }
+      }
+
+      const stage = roundStages[stageStep];
+      currentTarget = PLAYERS.find(p => p.id === roundQueue[currentRoundIndex]);
+
+      if (stage === 'GUESSING') {
+        currentGuesses = {};
+        await db.ref('currentGuesses').remove();
+      }
+
+      await db.ref('gameState').set({
+        stage: stage,
+        currentRoundPlayerId: currentTarget.id
+      });
+
+      renderStageView(stage);
+    }
+
+    function renderStageView(stage) {
+      document.getElementById('view-setup').classList.add('hidden');
+      document.getElementById('view-lobby').classList.add('hidden');
+      document.getElementById('view-stage').classList.remove('hidden');
+      document.getElementById('view-scoreboard').classList.add('hidden');
+      document.getElementById('view-finale').classList.add('hidden');
+      document.getElementById('vote-counter').classList.remove('hidden');
+
+      const btn = document.getElementById('primary-btn');
+      document.getElementById('round-indicator').innerText = `Round ${currentRoundIndex + 1} of ${roundQueue.length}`;
+
+      if (stage === 'GUESSING') {
+        document.getElementById('baby-label').innerText = "Baby Photo";
+        document.getElementById('baby-img').src = currentTarget.baby;
+        document.getElementById('baby-img').className = "w-80 h-96 object-cover rounded-2xl border-4 border-amber-400 shadow-2xl bg-slate-900 transition-all duration-300";
+        document.getElementById('box-real-baby').classList.add('hidden');
+        document.getElementById('adult-box').classList.add('hidden');
+        document.getElementById('identity-banner').classList.add('hidden');
+        document.getElementById('card-emily-trick').classList.add('hidden');
+        document.getElementById('card-owner-summary').classList.add('hidden');
+        document.getElementById('card-results-grid').classList.add('hidden');
+        updateVoteCount();
+        btn.innerText = "Lock Picks & Reveal Results";
+      }
+      else if (stage === 'REVEAL_RESULTS') {
+        const roundData = calculateScores();
+
+        document.getElementById('adult-img').src = currentTarget.adult;
+        document.getElementById('adult-box').classList.remove('hidden');
+        const banner = document.getElementById('identity-banner');
+        banner.innerText = `It's ${currentTarget.name}!`;
+        banner.classList.remove('hidden');
+
+        // Emily 3-photo reveal
+        if (currentTarget.realBaby) {
+          document.getElementById('baby-label').innerText = "Decoy Photo (Shown)";
+          document.getElementById('baby-img').className = "w-64 h-80 object-cover rounded-2xl border-4 border-slate-600 opacity-75 shadow-2xl bg-slate-900 transition-all duration-300";
+          document.getElementById('real-baby-img').src = currentTarget.realBaby;
+          document.getElementById('box-real-baby').classList.remove('hidden');
+          document.getElementById('adult-img').className = "w-64 h-80 object-cover rounded-2xl border-4 border-emerald-400 shadow-2xl bg-slate-900 transition-all duration-300";
+
+          const trickCard = document.getElementById('card-emily-trick');
+          trickCard.classList.remove('hidden');
+          trickCard.innerHTML = `🎭 PLOT TWIST: You were shown a decoy picture!`;
+        } else {
+          document.getElementById('box-real-baby').classList.add('hidden');
+          document.getElementById('baby-img').className = "w-80 h-96 object-cover rounded-2xl border-4 border-amber-400 shadow-2xl bg-slate-900 transition-all duration-300";
+          document.getElementById('adult-img').className = "w-80 h-96 object-cover rounded-2xl border-4 border-emerald-400 shadow-2xl bg-slate-900 transition-all duration-300";
+        }
+
+        // Summary Card for photo owner
+        const ownerSummary = document.getElementById('card-owner-summary');
+        ownerSummary.classList.remove('hidden');
+        ownerSummary.innerHTML = `
+          <div class="flex justify-between items-center mb-1">
+            <span class="text-white text-lg">Points Earned by <strong>${currentTarget.name}</strong> this round:</span>
+            <span class="text-2xl font-mono font-black text-amber-400">+${roundData.ownerRoundPoints} pts</span>
+          </div>
+          <div class="text-xs text-amber-200/80 space-x-2">
+            <span>• Fooled ${roundData.wrongVoterNames.length} player(s) (+${roundData.wrongVoterNames.length * POINTS.FOOLED_EACH} pts)</span>
+            ${roundData.partnerFooled ? `<span class="text-rose-300 font-bold">• Fooled Partner (+50 pts)</span>` : ''}
+            ${roundData.motherFooled ? `<span class="text-purple-300 font-bold">• Fooled Aditi (+20 pts)</span>` : ''}
+          </div>
+        `;
+
+        // Detailed Results List
+        document.getElementById('card-results-grid').classList.remove('hidden');
+        const listCorrect = document.getElementById('list-correct');
+        const listWrong = document.getElementById('list-wrong');
+
+        listCorrect.innerHTML = roundData.correctVoterNames.length > 0
+          ? roundData.correctVoterNames.map(n => `<div class="flex items-center text-emerald-300 font-semibold">✓ ${n}</div>`).join('')
+          : `<div class="text-slate-500 italic">Nobody got it right!</div>`;
+
+        listWrong.innerHTML = roundData.wrongVoterNames.length > 0
+          ? roundData.wrongVoterNames.map(item => `<div class="flex justify-between text-slate-300"><span>✗ ${item.name}</span><span class="text-xs text-slate-500">(Guessed: ${item.guessed})</span></div>`).join('')
+          : `<div class="text-slate-500 italic">Nobody was fooled!</div>`;
+
+        btn.innerText = "Show Scoreboard";
+      }
+      else if (stage === 'SCOREBOARD') {
+        document.getElementById('view-stage').classList.add('hidden');
+        document.getElementById('view-scoreboard').classList.remove('hidden');
+        document.getElementById('vote-counter').classList.add('hidden');
+
+        const ranked = PLAYERS
+          .filter(p => !p.isHost)
+          .map(p => ({ name: p.name, score: (playerStats[p.id] ? playerStats[p.id].score : 0) }))
+          .sort((x, y) => y.score - x.score);
+
+        const list = document.getElementById('leaderboard-list');
+        list.innerHTML = ranked.map((p, idx) => `
+          <div class="flex justify-between items-center px-5 py-3 rounded-xl ${idx === 0 ? 'bg-amber-500 text-slate-950 font-black' : 'bg-slate-900 border border-slate-800 font-medium'}">
+            <span class="text-lg">#${idx + 1} ${p.name}</span>
+            <span class="text-xl font-mono">${p.score} pts</span>
+          </div>
+        `).join('');
+
+        const isLastRound = (currentRoundIndex + 1 >= roundQueue.length);
+        btn.innerText = isLastRound ? "View Grand Finale 🏆" : "Next Baby Photo ➡️";
+      }
+    }
+
+    function calculateScores() {
+      const correctVoterNames = [];
+      const wrongVoterNames = [];
+      let ownerRoundPoints = 0;
+      let fooledCount = 0;
+
+      if (!playerStats[currentTarget.id]) {
+        playerStats[currentTarget.id] = { score: 0, guessPoints: 0, disguisePoints: 0, peopleFooled: 0 };
+      }
+
+      Object.keys(currentGuesses).forEach(voterId => {
+        const guessedTargetId = currentGuesses[voterId];
+        const voter = PLAYERS.find(p => p.id === voterId);
+        const guessedPerson = PLAYERS.find(p => p.id === guessedTargetId);
+
+        if (!voter) return;
+        if (!playerStats[voterId]) {
+          playerStats[voterId] = { score: 0, guessPoints: 0, disguisePoints: 0, peopleFooled: 0 };
+        }
+
+        if (guessedTargetId === currentTarget.id) {
+          playerStats[voterId].score += POINTS.CORRECT;
+          playerStats[voterId].guessPoints += POINTS.CORRECT;
+          correctVoterNames.push(voter.name);
+        } else {
+          playerStats[currentTarget.id].score += POINTS.FOOLED_EACH;
+          playerStats[currentTarget.id].disguisePoints += POINTS.FOOLED_EACH;
+          ownerRoundPoints += POINTS.FOOLED_EACH;
+          fooledCount++;
+
+          wrongVoterNames.push({
+            name: voter.name,
+            guessed: guessedPerson ? guessedPerson.name : 'Unknown'
+          });
+        }
+      });
+
+      // Fooled Partner Bonus (+50 pts)
+      let partnerFooled = false;
+      if (currentTarget.partner) {
+        const partner = PLAYERS.find(p => p.name === currentTarget.partner);
+        if (partner && currentGuesses[partner.id] && currentGuesses[partner.id] !== currentTarget.id) {
+          playerStats[currentTarget.id].score += POINTS.FOOLED_PARTNER;
+          playerStats[currentTarget.id].disguisePoints += POINTS.FOOLED_PARTNER;
+          ownerRoundPoints += POINTS.FOOLED_PARTNER;
+          partnerFooled = true;
+        }
+      }
+
+      // Fooled Aditi Bonus (+20 pts)
+      let motherFooled = false;
+      if (!currentTarget.isMother) {
+        const aditi = PLAYERS.find(p => p.isMother);
+        if (aditi && currentGuesses[aditi.id] && currentGuesses[aditi.id] !== currentTarget.id) {
+          playerStats[currentTarget.id].score += POINTS.FOOLED_MOTHER;
+          playerStats[currentTarget.id].disguisePoints += POINTS.FOOLED_MOTHER;
+          ownerRoundPoints += POINTS.FOOLED_MOTHER;
+          motherFooled = true;
+        }
+      }
+
+      playerStats[currentTarget.id].peopleFooled += fooledCount;
+
+      syncScoresToFirebase();
+
+      return {
+        correctVoterNames,
+        wrongVoterNames,
+        ownerRoundPoints,
+        partnerFooled,
+        motherFooled
+      };
+    }
+
+    function renderFinaleScreen() {
+      appState = 'GAME_OVER';
+      document.getElementById('view-setup').classList.add('hidden');
+      document.getElementById('view-lobby').classList.add('hidden');
+      document.getElementById('view-stage').classList.add('hidden');
+      document.getElementById('view-scoreboard').classList.add('hidden');
+      document.getElementById('view-finale').classList.remove('hidden');
+      document.getElementById('vote-counter').classList.add('hidden');
+      document.getElementById('round-indicator').innerText = "Game Over";
+
+      const btn = document.getElementById('primary-btn');
+      btn.innerText = "Game Completed 🎉";
+      btn.disabled = true;
+      btn.className = "bg-slate-800 text-slate-500 font-black px-7 py-3 rounded-xl text-lg cursor-not-allowed";
+
+      const eligible = PLAYERS.filter(p => !p.isHost).map(p => ({
+        id: p.id,
+        name: p.name,
+        score: (playerStats[p.id] ? playerStats[p.id].score : 0),
+        guessPoints: (playerStats[p.id] ? playerStats[p.id].guessPoints : 0),
+        disguisePoints: (playerStats[p.id] ? playerStats[p.id].disguisePoints : 0),
+        peopleFooled: (playerStats[p.id] ? playerStats[p.id].peopleFooled : 0)
+      }));
+
+      const bestGuesser = [...eligible].sort((a, b) => b.guessPoints - a.guessPoints)[0];
+      if (bestGuesser) {
+        document.getElementById('award-guesser-name').innerText = bestGuesser.name;
+        document.getElementById('award-guesser-stat').innerText = `${bestGuesser.guessPoints} pts (${bestGuesser.guessPoints / POINTS.CORRECT} correct guesses)`;
+      }
+
+      const masterDisguise = [...eligible].sort((a, b) => b.peopleFooled - a.peopleFooled || b.disguisePoints - a.disguisePoints)[0];
+      if (masterDisguise) {
+        document.getElementById('award-disguise-name').innerText = masterDisguise.name;
+        document.getElementById('award-disguise-stat').innerText = `Fooled ${masterDisguise.peopleFooled} people (+${masterDisguise.disguisePoints} disguise pts)`;
+      }
+
+      const rankedOverall = [...eligible].sort((a, b) => b.score - a.score);
+      const tableBody = document.getElementById('finale-table-body');
+      tableBody.innerHTML = rankedOverall.map((p, idx) => `
+        <tr class="${idx === 0 ? 'bg-amber-500/10 text-amber-300 font-bold' : 'hover:bg-slate-800/40'}">
+          <td class="py-3 px-2 flex items-center space-x-2">
+            <span class="w-6 font-bold ${idx === 0 ? 'text-amber-400' : 'text-slate-500'}">#${idx + 1}</span>
+            <span>${p.name}</span>
+          </td>
+          <td class="py-3 px-2 text-center font-mono text-emerald-400">${p.guessPoints} pts</td>
+          <td class="py-3 px-2 text-center font-mono text-fuchsia-400">${p.disguisePoints} pts</td>
+          <td class="py-3 px-2 text-center font-mono text-slate-300">${p.peopleFooled}</td>
+          <td class="py-3 px-2 text-right font-mono font-bold text-lg ${idx === 0 ? 'text-amber-400' : 'text-white'}">${p.score} pts</td>
+        </tr>
+      `).join('');
+    }
+
+    async function resetGamePrompt() {
+      if (!confirm("Are you sure you want to completely RESET all scores and return to Admin Setup?")) return;
+      PLAYERS.forEach(p => {
+        playerStats[p.id] = { score: 0, guessPoints: 0, disguisePoints: 0, peopleFooled: 0 };
+      });
+      await syncScoresToFirebase();
+      await db.ref('currentGuesses').remove();
+      await db.ref('roundQueue').remove();
+      await db.ref('gameState').set({ stage: 'SETUP', currentRoundPlayerId: null });
+      roundQueue = [];
+      currentRoundIndex = 0;
+      stageStep = 0;
+      renderSetupScreen();
+    }
+
+    init();
+  </script>
+</body>
+</html>
